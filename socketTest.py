@@ -61,7 +61,7 @@ class client_thread(threading.Thread):
             if response_msg!='accepted':
                 print('error occurs sending message')         
             
-        self.server_socket.close()
+        self.client_socket.close()
         print('client thread end ', threading.currentThread().getName())
         
 
