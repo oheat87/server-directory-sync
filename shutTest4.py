@@ -90,6 +90,7 @@ class Handler(FileSystemEventHandler):
             client_socket.sendall(self.typeNameExtension(event).encode())
         except socket.error as e:
             print('[filesystem event handler] socket error occurred:',e)
+        client_socket.close()
     def on_deleted(self,event):
         client_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         try:
@@ -97,6 +98,7 @@ class Handler(FileSystemEventHandler):
             client_socket.sendall(self.typeNameExtension(event).encode())
         except socket.error as e:
             print('[filesystem event handler] socket error occurred:',e)
+        client_socket.close()
     def on_modified(self,event):
         client_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         try:
@@ -104,6 +106,7 @@ class Handler(FileSystemEventHandler):
             client_socket.sendall(self.typeNameExtension(event).encode())
         except socket.error as e:
             print('[filesystem event handler] socket error occurred:',e)
+        client_socket.close()
     def on_moved(self,event):
         client_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         try:
@@ -111,6 +114,7 @@ class Handler(FileSystemEventHandler):
             client_socket.sendall(self.typeNameExtension(event).encode())
         except socket.error as e:
             print('[filesystem event handler] socket error occurred:',e)
+        client_socket.close()
 
 #class for watching a folder
 class Watcher:
