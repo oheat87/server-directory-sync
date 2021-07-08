@@ -14,7 +14,7 @@ from watchdog.events import PatternMatchingEventHandler
 #some constants
 MAX_LISTEN = 100
 MAX_BUFFER_LEN= 1024
-##IP_ADDR = '192.168.2.53'
+##IP_ADDR = '192.168.2.60'  # server test
 IP_ADDR = '127.0.0.1'
 
 #class for server threading
