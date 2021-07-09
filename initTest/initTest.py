@@ -7,6 +7,8 @@
     1. synchronize the files by the filename (파일이름을 비교하여 파일구조 초기화)
     2. write the changes in the log file (초기화를 위해 발생한 파일 변경을 로그로 남김)
 
+    +3. ignore sub-folders (default: 폴더내의 하위폴더들은 ignore 되게..)
+
 """
 
 import sys
@@ -61,8 +63,14 @@ class server_thread(threading.Thread):
                 # install ===================================================================
                 # pre file check:
                 filelist=os.listdir(self.target_dir)
-                data=ast.literal_eval(data)
+                data=ast.literal_eval(data) #string->list, data:원격서버 파일리스트
+
+                # 하위폴더 ignore
+                for _ in data:
+                    if os.path.isdir(self.target_dir+'/'+_):
+                        data.remove(_)
                 diff=set(data).difference(set(filelist))
+
                 # print(list(diff))
                 diff=list(diff)
                 if len(diff)!=0:
@@ -219,7 +227,14 @@ class Install:
                 except ConnectionRefusedError: # 서버 연결 열릴 때 까지 대기
                     continue
 
-            install_socket.sendall(str(os.listdir(self.target_dir)).encode())
+            filelist = os.listdir(self.target_dir)
+
+            # 하위폴더 ignore
+            for _ in filelist:
+                if os.path.isdir(self.target_dir + '/' + _):
+                    filelist.remove(_)
+
+            install_socket.sendall(str(filelist).encode())
 
             file = install_socket.recv(MAX_BUFFER_LEN) # 파일이름 받아옴
             print(f"send file [{file}] to server")
