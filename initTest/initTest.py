@@ -1,5 +1,5 @@
 """
-    update: 2021/07/08
+    update: 2021/07/12
 
     initialize folder structure for install (프로그램 설치를 위한 폴더구조 초기화)
 
@@ -8,7 +8,7 @@
     2. write the changes in the log file (초기화를 위해 발생한 파일 변경을 로그로 남김)
 
     +3. ignore sub-folders (default: 폴더내의 하위폴더들은 ignore 되게..)
-
+    +4. add _logtojson module (.log파일을 .json파일로 parsing)
 """
 
 import sys
@@ -27,11 +27,11 @@ from watchdog.events import PatternMatchingEventHandler
 # modules for install program
 import ast
 import _init
-import _logger
+#import _logger
+import _logtojson
 
 install = False  # 일단은 global변수로 선언하고 json설정파일에 프로그램 설정여부를 체크하는 flag넣기
-install_log = _logger.make_logger('install')
-
+install_log=_logtojson.run('install')
 
 #some constants
 MAX_LISTEN = 100
@@ -84,7 +84,7 @@ class server_thread(threading.Thread):
                             if not data:
                                 print(f"sync file [{file}] from server")
                                 # format: filename - state
-                                install_log.info(f"{file} - {changeState}")
+                                install_log.info(f"{file}/{changeState}")
                                 break
                             f.write(data)
                     #self.connection_socket.close()
