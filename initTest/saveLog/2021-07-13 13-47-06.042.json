@@ -1,0 +1,16 @@
+[
+    {
+        "time": "2021-07-13 13:47:06,878",
+        "filename": "Rider Log User Manual V1.2(Korean).pdf",
+        "process": "install",
+        "logType": "INFO",
+        "flag": "create"
+    },
+    {
+        "time": "2021-07-13 13:47:06,894",
+        "filename": "k.txt",
+        "process": "install",
+        "logType": "INFO",
+        "flag": "create"
+    }
+]

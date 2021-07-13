@@ -1,0 +1,16 @@
+[
+    {
+        "time": "2021-07-13 13:47:06,072",
+        "filename": "1.jpg",
+        "process": "install",
+        "logType": "INFO",
+        "flag": "create"
+    },
+    {
+        "time": "2021-07-13 13:47:06,079",
+        "filename": "3.txt",
+        "process": "install",
+        "logType": "INFO",
+        "flag": "create"
+    }
+]
