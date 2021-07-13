@@ -1,5 +1,5 @@
 """
-    update: 2021/07/12
+    update: 2021/07/13
 
     initialize folder structure for install (프로그램 설치를 위한 폴더구조 초기화)
 
@@ -9,6 +9,9 @@
 
     +3. ignore sub-folders (default: 폴더내의 하위폴더들은 ignore 되게..)
     +4. add _logtojson module (.log파일을 .json파일로 parsing)
+    +5. add setting.json (json파일로 설정값 저장, install은 최초 한번만 실행)
+    +6. add log2json function in _logtojson (여러개의 log를 .json으로 파싱)
+
 """
 
 import sys
@@ -26,12 +29,16 @@ from watchdog.events import PatternMatchingEventHandler
 
 # modules for install program
 import ast
+import json
+
 import _init
 #import _logger
 import _logtojson
+import _install
+
 
 install = False  # 일단은 global변수로 선언하고 json설정파일에 프로그램 설정여부를 체크하는 flag넣기
-install_log=_logtojson.run('install')
+install_log,time =_logtojson.run('install')
 
 #some constants
 MAX_LISTEN = 100
@@ -96,6 +103,9 @@ class server_thread(threading.Thread):
             print('[server thread] socket error debug:',e)
             print('[server thread] exiting....')
 
+        # json format
+        _logtojson.log2json()
+
         # before finishing, close all the sockets this server thread has
         self.closeAllSocket()
         print('[server thread] end ', threading.currentThread().getName())
@@ -123,6 +133,77 @@ class server_thread(threading.Thread):
         # stop server thread by closing all the sockets that this thread has
         self.closeAllSocket()
 
+# ==========================================================================
+
+if __name__ == '__main__':
+
+    # set install directory path
+    # print("설치할 위치 지정:")
+    # install_path=input()
+    # _init.create(install_path)
+    # print(os.getcwd())
+    setFile=os.getcwd()+'\\setting.json'
+
+    with open(setFile, 'r') as f:
+        setting = json.load(f)
+
+    if setting["install"] == False:
+        setting["servers"][0]["ip_1"] = 'localhost'
+        setting["servers"][0]["port_1"] = int(sys.argv[1])
+
+        setting["servers"][1]["ip_2"] = IP_ADDR
+        setting["servers"][1]["port_2"] = int(sys.argv[2])
+
+        setting["dirPath"] = sys.argv[3]
+
+        with open(setFile, 'w', encoding='utf-8') as mk:
+            json.dump(setting, mk, indent='\t')
+
+    # check system arguments num
+    if len(sys.argv) != 4:
+        print('wrong system arguments!')
+        sys.exit(1)
+
+    # ---------- server-client communication part
+
+    with open(setFile, 'r') as f:
+        json_data = json.load(f)
+
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(('', int(json_data["servers"][0]["port_1"])))
+    server_socket.listen(MAX_LISTEN)
+
+    st = server_thread('ST', server_socket, json_data["dirPath"])
+    st.start()
+
+    # ---------- filesystem watcher part
+    try:
+        print(setting["install"] == False)
+        if setting["install"] == False:
+            install = _install.Install(json_data["dirPath"], IP_ADDR, int(json_data["servers"][1]["port_2"]))
+            install.install()
+            setting["install"] = True
+            setting["latestSync"]=time
+            # update json seeting file
+            with open(setFile, 'w', encoding='utf-8') as mk:
+                json.dump(setting, mk, indent='\t')
+
+            # json format
+            # _logtojson.log2json()
+
+            print("[install status] success!")
+    except KeyboardInterrupt:
+        os._exit(0)
+
+    # watcher = Watcher(sys.argv[3], IP_ADDR, int(sys.argv[2]))
+    # watcher.run()
+
+    # st.stop()
+    st.join()
+    print('[main thread] end entire program')
+
+
+# 초기화에 사용되지 않은 코드 =================================================================
 """
 # class for defining file system event handler
 class Handler(FileSystemEventHandler):
@@ -206,87 +287,3 @@ class Watcher:
             self.observer.stop()
             return
 """
-
-class Install:
-    def __init__(self,path,ip_addr,port_num):
-        self.ip_addr=ip_addr
-        self.port_num=port_num
-        self.target_dir=path
-        os.chdir(path)
-        print(f'[Install] directory path: {os.getcwd()}')
-
-    def install(self):
-
-        while True:
-            connect = False
-            while not connect:
-                try:
-                    install_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    install_socket.connect((self.ip_addr,self.port_num))
-                    connect=True
-                except ConnectionRefusedError: # 서버 연결 열릴 때 까지 대기
-                    continue
-
-            filelist = os.listdir(self.target_dir)
-
-            # 하위폴더 ignore
-            for _ in filelist:
-                if os.path.isdir(self.target_dir + '/' + _):
-                    filelist.remove(_)
-
-            install_socket.sendall(str(filelist).encode())
-
-            file = install_socket.recv(MAX_BUFFER_LEN) # 파일이름 받아옴
-            print(f"send file [{file}] to server")
-            if not file:
-                break
-            try:
-                with open(file.decode(), 'rb') as f:
-                    while True:
-                        data = f.read(MAX_BUFFER_LEN)
-                        if not data:
-                            break
-                        install_socket.sendall(data)
-                install_socket.close()
-            except OSError as e:
-                print('there is no such file:', e)
-            except KeyboardInterrupt:
-                os._exit(0)
-        # ==========================================================================
-
-if __name__ == '__main__':
-
-    # set install directory path
-    # print("설치할 위치 지정:")
-    # install_path=input()
-    # _init.create(install_path)
-
-    # check system arguments num
-    if len(sys.argv)!=4:
-        print('wrong system arguments!')
-        sys.exit(1)
-        
-    #---------- server-client communication part
-    server_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('', int(sys.argv[1])))
-    server_socket.listen(MAX_LISTEN)
-
-    st= server_thread('ST',server_socket,sys.argv[3])
-    st.start()
-
-    #---------- filesystem watcher part
-    try:
-        if install==False:
-            install=Install(sys.argv[3],IP_ADDR,int(sys.argv[2]))
-            install.install()
-            install=True
-            print("[install status] success!")
-    except KeyboardInterrupt:
-        os._exit(0)
-
-    # watcher = Watcher(sys.argv[3], IP_ADDR, int(sys.argv[2]))
-    # watcher.run()
-    
-    #st.stop()
-    st.join()
-    print('[main thread] end entire program')

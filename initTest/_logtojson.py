@@ -7,6 +7,8 @@ import traceback
 BASE_DIR=os.path.abspath(os.getcwd())
 LOG_DIR=os.path.join(BASE_DIR,"saveLog")
 
+time = str(datetime.datetime.now()).replace(":", "-")[:-3]
+
 JSON_LOGGING_FORMAT=json.dumps({
     "time": "%(asctime)s",
     "filename":"%(filename)s",
@@ -61,9 +63,10 @@ class JsonFormatter(logging.Formatter):
         s = self.formatMessage(record)
 
         # add filename & flag
-        s=eval(s)
+        s=json.loads(s)
         s["filename"]=filename
         s["flag"]=flag
+        #s=json.dumps(s,indent=4)
 
         return str(s)
 
@@ -111,10 +114,9 @@ class JsonLogger(logging.Logger):
 
 
 def run(process):
-    time = str(datetime.datetime.now()).replace(":", "-")[:-3]
     my_logger = JsonLogger(f"{time}",process).getLogger()
 
-    return my_logger
+    return my_logger,time
 
     # my_logger.info(info)
 
@@ -122,3 +124,13 @@ def run(process):
     #    open('./my-log.json', 'rb')
     #except FileNotFoundError as e:
     #    my_logger.exception("file exception", exc_info=e)
+
+def log2json():
+    with open(LOG_DIR+'\\'+f'{time}.json','r') as f:
+        f=list(f)
+        logList=[]
+        if len(f)>0:
+            for singleLog in f:
+                logList.append(eval(singleLog))
+    with open(LOG_DIR+'\\'+f'{time}.json','w') as f:
+        f.writelines(json.dumps(logList,indent=4))

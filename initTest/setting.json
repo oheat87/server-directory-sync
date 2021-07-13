@@ -1,0 +1,16 @@
+{
+	"servers": [
+		{
+			"ip_1": "localhost",
+			"port_1": null
+		},
+		{
+			"ip_2": null,
+			"port_2": null
+		}
+	],
+	"dirPath": null,
+	"timeInterval": null,
+	"latestSync": null,
+	"install": false
+}
