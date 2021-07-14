@@ -4,8 +4,8 @@ import datetime
 import os
 import traceback
 
-BASE_DIR=os.path.abspath(os.getcwd())
-LOG_DIR=os.path.join(BASE_DIR,"saveLog")
+# BASE_DIR=os.path.abspath(os.getcwd())
+# LOG_DIR=os.path.join(BASE_DIR,"saveLog")
 
 time = str(datetime.datetime.now()).replace(":", "-")[:-3]
 
@@ -16,6 +16,8 @@ JSON_LOGGING_FORMAT=json.dumps({
     "logType":"%(levelname)s",
     "flag":"%(flag)s"
 }, indent=4)
+
+
 
 class JsonLoggingFilter(logging.Filter):
     def __init__(self, name, filename, flag):
@@ -85,14 +87,14 @@ class JsonLogger(logging.Logger):
         self.logger = logging.Logger(name=process)
         self.logger.setLevel(level)
 
-        if not os.path.exists(LOG_DIR):
-            os.makedirs(LOG_DIR)
         log_file_path = os.path.join(LOG_DIR, "%s.json" % time)
         json_logging_filter = JsonLoggingFilter(time,filename=None,flag=None)
         json_formatter = JsonFormatter(JSON_LOGGING_FORMAT)
 
         # file log
-        file_handle = logging.FileHandler(log_file_path, mode=mode)
+        if not os.path.exists(LOG_DIR):
+            os.makedirs(LOG_DIR)
+        file_handle = logging.FileHandler(log_file_path, mode='w')
         file_handle.setLevel(level)
         file_handle.setFormatter(json_formatter)
         file_handle.addFilter(json_logging_filter)
@@ -114,8 +116,8 @@ class JsonLogger(logging.Logger):
 
 
 def run(process):
-    my_logger = JsonLogger(f"{time}",process).getLogger()
 
+    my_logger = JsonLogger(f"{time}",process).getLogger()
     return my_logger,time
 
     # my_logger.info(info)
@@ -134,3 +136,8 @@ def log2json():
                 logList.append(eval(singleLog))
     with open(LOG_DIR+'\\'+f'{time}.json','w') as f:
         f.writelines(json.dumps(logList,indent=4))
+
+def setLogDir(path):
+    global LOG_DIR
+    LOG_DIR=path+""
+

@@ -1,5 +1,5 @@
 """
-    update: 2021/07/13
+    update: 2021/07/14
 
     initialize folder structure for install (프로그램 설치를 위한 폴더구조 초기화)
 
@@ -11,6 +11,7 @@
     +4. add _logtojson module (.log파일을 .json파일로 parsing)
     +5. add setting.json (json파일로 설정값 저장, install은 최초 한번만 실행)
     +6. add log2json function in _logtojson (여러개의 log를 .json으로 파싱)
+    +7. set the install path by user and store the log in /syncPro/log (설치위치 지정 및 로그폴더에 로그저장)
 
 """
 
@@ -36,15 +37,15 @@ import _init
 import _logtojson
 import _install
 
-
 install = False  # 일단은 global변수로 선언하고 json설정파일에 프로그램 설정여부를 체크하는 flag넣기
-install_log,time =_logtojson.run('install')
 
 #some constants
 MAX_LISTEN = 100
 MAX_BUFFER_LEN= 1024
-##IP_ADDR = '192.168.2.60'
+#IP_ADDR = '192.168.2.60'
 IP_ADDR = '127.0.0.1'
+DEFAULT_TIME_INTERVAL=120
+
 
 #class for server threading
 class server_thread(threading.Thread):
@@ -91,7 +92,7 @@ class server_thread(threading.Thread):
                             if not data:
                                 print(f"sync file [{file}] from server")
                                 # format: filename - state
-                                install_log.info(f"{file}/{changeState}")
+                                _install.install_log.info(f"{file}/{changeState}")
                                 break
                             f.write(data)
                     #self.connection_socket.close()
@@ -99,6 +100,8 @@ class server_thread(threading.Thread):
                     # =======================================================================
                 if len(diff)==0:
                     break
+            # self.connection_socket.close()
+            # self.connection_socket = None
         except socket.error as e:
             print('[server thread] socket error debug:',e)
             print('[server thread] exiting....')
@@ -137,63 +140,37 @@ class server_thread(threading.Thread):
 
 if __name__ == '__main__':
 
-    # set install directory path
-    # print("설치할 위치 지정:")
-    # install_path=input()
-    # _init.create(install_path)
-    # print(os.getcwd())
-    setFile=os.getcwd()+'\\setting.json'
-
-    with open(setFile, 'r') as f:
-        setting = json.load(f)
-
-    if setting["install"] == False:
-        setting["servers"][0]["ip_1"] = 'localhost'
-        setting["servers"][0]["port_1"] = int(sys.argv[1])
-
-        setting["servers"][1]["ip_2"] = IP_ADDR
-        setting["servers"][1]["port_2"] = int(sys.argv[2])
-
-        setting["dirPath"] = sys.argv[3]
-
-        with open(setFile, 'w', encoding='utf-8') as mk:
-            json.dump(setting, mk, indent='\t')
-
     # check system arguments num
     if len(sys.argv) != 4:
         print('wrong system arguments!')
         sys.exit(1)
 
-    # ---------- server-client communication part
+    # set install directory path
+    print("설치할 위치 지정:")
+    install_path=input()
+    _logtojson.setLogDir(install_path + '\\syncPro\\log')
+    _init.create(install_path)
+    print(os.getcwd())
+
+    # install & setting ========================================================
+    setFile = install_path + '\\syncPro\\setting.json'
+    install=_install.Install(sys.argv[3],'localhost',sys.argv[1],install_path)
 
     with open(setFile, 'r') as f:
-        json_data = json.load(f)
+        setting = json.load(f)
+    # ==========================================================================
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('', int(json_data["servers"][0]["port_1"])))
+    server_socket.bind(('', int(sys.argv[1])))
     server_socket.listen(MAX_LISTEN)
 
-    st = server_thread('ST', server_socket, json_data["dirPath"])
+    st = server_thread('ST', server_socket, sys.argv[3])
     st.start()
 
-    # ---------- filesystem watcher part
-    try:
-        print(setting["install"] == False)
-        if setting["install"] == False:
-            install = _install.Install(json_data["dirPath"], IP_ADDR, int(json_data["servers"][1]["port_2"]))
-            install.install()
-            setting["install"] = True
-            setting["latestSync"]=time
-            # update json seeting file
-            with open(setFile, 'w', encoding='utf-8') as mk:
-                json.dump(setting, mk, indent='\t')
+    ##
+    install.setting(IP_ADDR,int(sys.argv[2]))
+    ##
 
-            # json format
-            # _logtojson.log2json()
-
-            print("[install status] success!")
-    except KeyboardInterrupt:
-        os._exit(0)
 
     # watcher = Watcher(sys.argv[3], IP_ADDR, int(sys.argv[2]))
     # watcher.run()
