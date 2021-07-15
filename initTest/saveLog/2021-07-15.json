@@ -1,0 +1,16 @@
+[
+    {
+        "time": "2021-07-15 16:18:54,650",
+        "filename": "3333.txt",
+        "process": "sync",
+        "logType": "INFO",
+        "flag": "create"
+    },
+    {
+        "time": "2021-07-15 16:19:25,269",
+        "filename": "3.txt",
+        "process": "sync",
+        "logType": "INFO",
+        "flag": "delete"
+    }
+]
