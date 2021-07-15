@@ -14,6 +14,7 @@ from watchdog.events import PatternMatchingEventHandler
 #import user module
 import newTmpTest
 import syncJobTest
+import rttTest
 
 #some constants
 MAX_LISTEN = 100
@@ -161,12 +162,13 @@ class Handler(FileSystemEventHandler):
         
 #class for watching a folder
 class Watcher:
-    def __init__(self,path,time_interval):
+    def __init__(self,path,end_time):
         
         self.event_handler = Handler()
         self.observer = Observer()
         self.target_dir= path
-        self.time_interval=time_interval
+##        self.time_interval=time_interval
+        self.end_time=end_time
         os.chdir(path)
         print(f'[filesystem watcher] now watching {os.getcwd()}')
 
@@ -181,11 +183,12 @@ class Watcher:
         self.observer.schedule(self.event_handler,self.target_dir,recursive=False)
         self.observer.start()
         #keep watching a folder until run out of time or get keyboard interrupt
-        start_time=time.time()
+##        start_time=time.time()
         try:
             while True:
-                cur_time=time.time()
-                if cur_time-start_time>=self.time_interval:
+##                cur_time=time.time()
+##                if cur_time-start_time>=self.time_interval:
+                if time.time()>=self.end_time:
                     self.observer.stop()
                     return True
                 time.sleep(0.1)
@@ -209,9 +212,15 @@ if __name__ == '__main__':
 ##        print('wrong system arguments!')
 ##        sys.exit(1)
 
+    #---------- time synchronization process
+    print('[main thread] doing time synchronization')
+    prev_endtime=rttTest.waitToSync(IP_ADDR,int(sys.argv[1]),int(sys.argv[2]))
+    print('[main thread] time synchronization done')
+
     #---------- make filesystem watcher and do synchronization process on every time interval
     while True:
-        watcher= Watcher(sys.argv[3],DEFAULT_TIME_INTERVAL)
+        prev_endtime+=DEFAULT_TIME_INTERVAL
+        watcher= Watcher(sys.argv[3],prev_endtime)
         do_synchronization= watcher.run()
         if not do_synchronization:
             break
