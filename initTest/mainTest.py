@@ -1,3 +1,15 @@
+"""
+    update: 2021/07/15
+
+    store logs to the [date].json file (동기화 프로그램의 과정을 로그파일로 저장)
+
+    구현내용:
+    1. store logs of create or delete files in [date].json (파일 생성, 삭제에대한 동기화 로그 저장)
+    2. merge code with rttTest.py (코드 merge)
+
+"""
+
+
 import sys
 
 #modules for socket communication
@@ -14,6 +26,7 @@ from watchdog.events import PatternMatchingEventHandler
 #import user module
 import newTmpTest
 import syncJobTest
+import rttTest
 
 #install & init_setting
 import initTest
@@ -165,12 +178,12 @@ class Handler(FileSystemEventHandler):
         
 #class for watching a folder
 class Watcher:
-    def __init__(self,path,time_interval):
+    def __init__(self,path,end_time):
         
         self.event_handler = Handler()
         self.observer = Observer()
         self.target_dir= path
-        self.time_interval=time_interval
+        self.end_time=end_time
         os.chdir(path)
         print(f'[filesystem watcher] now watching {os.getcwd()}')
 
@@ -185,11 +198,11 @@ class Watcher:
         self.observer.schedule(self.event_handler,self.target_dir,recursive=False)
         self.observer.start()
         #keep watching a folder until run out of time or get keyboard interrupt
-        start_time=time.time()
+        # start_time=time.time()
         try:
             while True:
                 cur_time=time.time()
-                if cur_time-start_time>=self.time_interval:
+                if time.time()>=self.end_time:
                     self.observer.stop()
                     return True
                 time.sleep(0.1)
@@ -213,7 +226,6 @@ if __name__ == '__main__':
 ##        print('wrong system arguments!')
 ##        sys.exit(1)
 
-
     ### install start ==========================================
     # TODO
     # install 한 번만 실행할 수 있게 보완 필요
@@ -222,10 +234,17 @@ if __name__ == '__main__':
     ### install end ============================================
 
 
+    #---------- time synchronization process
+    print('[main thread] doing time synchronization')
+    prev_endtime=rttTest.waitToSync(IP_ADDR,int(sys.argv[1]),int(sys.argv[2]))
+    print('[main thread] time synchronization done')
+
+
     #---------- make filesystem watcher and do synchronization process on every time interval
     while True:
-        watcher= Watcher(sys.argv[3],DEFAULT_TIME_INTERVAL)
-        do_synchronization= watcher.run()
+        prev_endtime+=DEFAULT_TIME_INTERVAL
+        watcher = Watcher(sys.argv[3],prev_endtime)
+        do_synchronization = watcher.run()
         if not do_synchronization:
             break
 
