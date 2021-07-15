@@ -8,6 +8,7 @@ import traceback
 # LOG_DIR=os.path.join(BASE_DIR,"saveLog")
 
 time = str(datetime.datetime.now()).replace(":", "-")[:-3]
+date = str(datetime.date.today())
 
 JSON_LOGGING_FORMAT=json.dumps({
     "time": "%(asctime)s",
@@ -78,8 +79,8 @@ class JsonLogger(logging.Logger):
     level = None
     mode = None
 
-    def __init__(self, time, process, level=logging.INFO, console_level=logging.INFO, mode="w"):
-        self.name = time
+    def __init__(self, time, process, level=logging.INFO, console_level=logging.INFO, mode="a"):
+        # self.name = time
         self.time = time
 
         logging.Logger.__init__(self, name=process)
@@ -94,7 +95,7 @@ class JsonLogger(logging.Logger):
         # file log
         if not os.path.exists(LOG_DIR):
             os.makedirs(LOG_DIR)
-        file_handle = logging.FileHandler(log_file_path, mode='w')
+        file_handle = logging.FileHandler(log_file_path, mode=mode)
         file_handle.setLevel(level)
         file_handle.setFormatter(json_formatter)
         file_handle.addFilter(json_logging_filter)
@@ -116,8 +117,7 @@ class JsonLogger(logging.Logger):
 
 
 def run(process):
-
-    my_logger = JsonLogger(f"{time}",process).getLogger()
+    my_logger = JsonLogger(f"{date}",process).getLogger()
     return my_logger,time
 
     # my_logger.info(info)
@@ -128,16 +128,22 @@ def run(process):
     #    my_logger.exception("file exception", exc_info=e)
 
 def log2json():
-    with open(LOG_DIR+'\\'+f'{time}.json','r') as f:
+    with open(LOG_DIR+'\\'+f'{date}.json','r') as f:
         f=list(f)
         logList=[]
         if len(f)>0:
             for singleLog in f:
                 logList.append(eval(singleLog))
-    with open(LOG_DIR+'\\'+f'{time}.json','w') as f:
+    with open(LOG_DIR+'\\'+f'{date}.json','w') as f:
         f.writelines(json.dumps(logList,indent=4))
+
+def json2log():
+    with open(LOG_DIR+'\\'+f'{date}.json','r') as f:
+        s = json.load(f)
+    with open(LOG_DIR+'\\'+f'{date}.json','w') as f:
+        for data in s:
+            f.write(str(data) + "\n")
 
 def setLogDir(path):
     global LOG_DIR
     LOG_DIR=path+""
-

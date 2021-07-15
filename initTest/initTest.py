@@ -1,17 +1,19 @@
 """
-    update: 2021/07/14
+    update: 2021/07/15
 
     initialize folder structure for install (프로그램 설치를 위한 폴더구조 초기화)
 
     구현내용:
     1. synchronize the files by the filename (파일이름을 비교하여 파일구조 초기화)
     2. write the changes in the log file (초기화를 위해 발생한 파일 변경을 로그로 남김)
+    3. ignore sub-folders (default: 폴더내의 하위폴더들은 ignore 되게..)
+    4. add _logtojson module (.log파일을 .json파일로 parsing)
+    5. add setting.json (json파일로 설정값 저장, install은 최초 한번만 실행)
+    6. add log2json function in _logtojson (여러개의 log를 .json으로 파싱)
+    7. set the install path by user and store the log in /syncPro/log (설치위치 지정 및 로그폴더에 로그저장)
 
-    +3. ignore sub-folders (default: 폴더내의 하위폴더들은 ignore 되게..)
-    +4. add _logtojson module (.log파일을 .json파일로 parsing)
-    +5. add setting.json (json파일로 설정값 저장, install은 최초 한번만 실행)
-    +6. add log2json function in _logtojson (여러개의 log를 .json으로 파싱)
-    +7. set the install path by user and store the log in /syncPro/log (설치위치 지정 및 로그폴더에 로그저장)
+    +8. change the name format (2021-07-15.json) (날짜.json으로 로그파일 이름변경)
+    +9. merge _init and _install (_install모듈로 통합)
 
 """
 
@@ -32,8 +34,6 @@ from watchdog.events import PatternMatchingEventHandler
 import ast
 import json
 
-import _init
-#import _logger
 import _logtojson
 import _install
 
@@ -137,38 +137,39 @@ class server_thread(threading.Thread):
         self.closeAllSocket()
 
 # ==========================================================================
-
-if __name__ == '__main__':
-
+def main(port1,port2,syncpath):
+    global install_path
     # check system arguments num
     if len(sys.argv) != 4:
         print('wrong system arguments!')
         sys.exit(1)
 
+    # install & setting ========================================================
+
     # set install directory path
     print("설치할 위치 지정:")
     install_path=input()
-    _logtojson.setLogDir(install_path + '\\syncPro\\log')
-    _init.create(install_path)
+    log_path=install_path + '\\syncPro\\log'
+    _logtojson.setLogDir(log_path)
+    _install.initFolder(install_path)
     print(os.getcwd())
 
-    # install & setting ========================================================
-    setFile = install_path + '\\syncPro\\setting.json'
-    install=_install.Install(sys.argv[3],'localhost',sys.argv[1],install_path)
+    # setFile = install_path + '\\syncPro\\setting.json'
+    install=_install.Install(syncpath,'localhost',port1,install_path)
 
-    with open(setFile, 'r') as f:
-        setting = json.load(f)
+    # with open(setFile, 'r') as f:
+    #     setting = json.load(f)
     # ==========================================================================
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('', int(sys.argv[1])))
+    server_socket.bind(('', int(port1)))
     server_socket.listen(MAX_LISTEN)
 
-    st = server_thread('ST', server_socket, sys.argv[3])
+    st = server_thread('ST', server_socket, syncpath)
     st.start()
 
     ##
-    install.setting(IP_ADDR,int(sys.argv[2]))
+    install.setting(IP_ADDR,int(port2))
     ##
 
 
@@ -178,6 +179,11 @@ if __name__ == '__main__':
     # st.stop()
     st.join()
     print('[main thread] end entire program')
+
+    return log_path
+
+if __name__ == '__main__':
+    main(sys.argv[1],sys.argv[2],sys.argv[3])
 
 
 # 초기화에 사용되지 않은 코드 =================================================================
