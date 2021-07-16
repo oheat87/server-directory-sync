@@ -247,7 +247,8 @@ if __name__ == '__main__':
 ##        print('------------------received Track Data--------------------')
 ##        tds.printContent()
         
-        deleteList,sendList,my_modifiedList=syncJobTest.getJobList(ds.getContent(),received_trackData)
+##        deleteList,sendList,my_modifiedList=syncJobTest.getJobList(ds.getContent(),received_trackData)
+        deleteList,sendList,recv_createList,recv_modifiedList=syncJobTest.getJobList(ds.getContent(),received_trackData)
         # here, need to delete dictionaries!!!!
         ds.resetContent()
         del received_trackData
@@ -258,8 +259,11 @@ if __name__ == '__main__':
         for fname in deleteList: print(fname)
         print('------------send List----------------')
         for fname in sendList: print(fname)
+        print('------------create List----------------')
+        for fname in recv_createList: print(fname)
         print('------------modified List----------------')
-        for fname in my_modifiedList: print(fname)
+        for fname in recv_modifiedList: print(fname)
+        
         
         #first, delete files to synchronize
         #we can do some file backup operations here before really delete the file

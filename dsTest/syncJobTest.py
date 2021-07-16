@@ -141,7 +141,9 @@ class files_server_thread(threading.Thread):
 def getJobList(my_event_dictionary,other_event_dictionary):
     deleteList=[]
     sendList=[]
-    my_modifiedList=[]
+##    my_modifiedList=[]
+    recv_createList=[]
+    recv_modifiedList=[]
     # first compare with respect to my file list
     for file_name in my_event_dictionary:
         if file_name not in other_event_dictionary:
@@ -164,7 +166,8 @@ def getJobList(my_event_dictionary,other_event_dictionary):
                     if my_event[1]>other_event[1]:
                         sendList.append(file_name)
                     else:
-                        my_modifiedList.append(file_name)
+##                        my_modifiedList.append(file_name)
+                        recv_modifiedList.append(file_name)
                 else:
                     print('[syncJobTest getJobList func] unexpected pair of event has occured!')
                     print(f'my_event_dictionary[{file_name}][0]=\'{my_event[0]}\'')
@@ -175,7 +178,8 @@ def getJobList(my_event_dictionary,other_event_dictionary):
                     if my_event[1]>other_event[1]:
                         sendList.append(file_name)
                     else:
-                        my_modifiedList.append(file_name)
+##                        my_modifiedList.append(file_name)
+                        recv_modifiedList.append(file_name)
                 else:
                     print('[syncJobTest getJobList func] unexpected pair of event has occured!')
                     print(f'my_event_dictionary[{file_name}][0]=\'{my_event[0]}\'')
@@ -197,16 +201,23 @@ def getJobList(my_event_dictionary,other_event_dictionary):
         if file_name not in my_event_dictionary:
             if other_event_dictionary[file_name][0]=='d':
                 deleteList.append(file_name)
-                continue
+            elif other_event_dictionary[file_name][0]=='m':
+                recv_modifiedList.append(file_name)
+            elif other_event_dictionary[file_name][0]=='c':
+                recv_createList.append(file_name)
             else:
-                my_modifiedList.append(file_name)
+                print('[syncJobTest getJobList func] unexpected pair of event has occured!')
+                print(f'my_event_dictionary[{file_name}][0]=\'{my_event[0]}\'')
+                print(f'other_event_dictionary[{file_name}][0]=\'{other_event[0]}\'')
+                sys.exit(1)
+            continue
         else:
             print('[syncJobTest getJobList func] unexpected pair of event has occured!')
             print(f'my_event_dictionary[{file_name}][0]=\'{my_event[0]}\'')
             print(f'other_event_dictionary[{file_name}][0]=\'{other_event[0]}\'')
             sys.exit(1)
 
-    return [deleteList,sendList,my_modifiedList]
+    return [deleteList,sendList,recv_createList,recv_modifiedList]
 
 def deleteFiles(file_list):
     for file_name in file_list:
