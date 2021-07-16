@@ -42,8 +42,8 @@ install = False  # 일단은 global변수로 선언하고 json설정파일에 �
 #some constants
 MAX_LISTEN = 100
 MAX_BUFFER_LEN= 1024
-#IP_ADDR = '192.168.2.60'
-IP_ADDR = '127.0.0.1'
+IP_ADDR = '192.168.2.60'
+# IP_ADDR = '127.0.0.1'
 DEFAULT_TIME_INTERVAL=120
 
 
@@ -105,6 +105,14 @@ class server_thread(threading.Thread):
         except socket.error as e:
             print('[server thread] socket error debug:',e)
             print('[server thread] exiting....')
+
+        # re-start
+        install_path = os.getcwd() + "\\syncPro"
+        if os.path.exists(install_path + "\\setting.json"):
+            with open(install_path + "\\setting.json", 'r') as f:
+                setting = json.load(f)
+            if setting["install"]==True:
+                _logtojson.json2log()
 
         # json format
         _logtojson.log2json()
