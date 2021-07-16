@@ -90,13 +90,17 @@ class files_server_thread(threading.Thread):
                 # get filename
                 data = self.connection_socket.recv(MAX_BUFFER_LEN)
                 file_name= data.decode('utf-8')
+                file_flag=file_name.split("/")[1]
+                file_name=file_name.split("/")[0]
+
                 self.connection_socket.sendall(HANDSHAKE_STR_FILE_ACK.encode('utf-8'))
 
                 # receive file
                 with open(file_name,'wb') as f:
                     while True:
                         data = self.connection_socket.recv(MAX_BUFFER_LEN)
-                        changeState='create'
+                        if file_flag=='c':changeState="create"
+                        if file_flag=='m':changeState="modified"
                         if not data:
                             ### save logs =====================================
                             _logtojson.json2log()
@@ -105,7 +109,6 @@ class files_server_thread(threading.Thread):
                             ### re-format to .json
                             _logtojson.log2json()
                             ### ===============================================
-
                             break
                         f.write(data)
 
@@ -152,12 +155,17 @@ class files_server_thread(threading.Thread):
 def getJobList(my_event_dictionary,other_event_dictionary):
     deleteList=[]
     sendList=[]
-    my_modifiedList=[]
+    # my_modifiedList=[]
+    recv_createList=[]
+    recv_modifiedList=[]
     # first compare with respect to my file list
     for file_name in my_event_dictionary:
         if file_name not in other_event_dictionary:
             if my_event_dictionary[file_name][0]!='d':
-                sendList.append(file_name)
+                if my_event_dictionary[file_name][0]=='c':
+                    sendList.append(file_name+"/c")
+                if my_event_dictionary[file_name][0]=='m':
+                    sendList.append(file_name+"/m")
         else:
             my_event=my_event_dictionary[file_name]
             other_event=other_event_dictionary[file_name]
@@ -173,9 +181,11 @@ def getJobList(my_event_dictionary,other_event_dictionary):
                     deleteList.append(file_name)
                 elif other_event[0]=='m':
                     if my_event[1]>other_event[1]:
-                        sendList.append(file_name)
+                        sendList.append(file_name+"/m")
                     else:
-                        my_modifiedList.append(file_name)
+                        # my_modifiedList.append(file_name)
+                        recv_modifiedList.append(file_name)
+
                 else:
                     print('[syncJobTest getJobList func] unexpected pair of event has occured!')
                     print(f'my_event_dictionary[{file_name}][0]=\'{my_event[0]}\'')
@@ -184,9 +194,11 @@ def getJobList(my_event_dictionary,other_event_dictionary):
             elif my_event[0]=='c':
                 if other_event[0]=='c':
                     if my_event[1]>other_event[1]:
-                        sendList.append(file_name)
+                        sendList.append(file_name+"/c")
                     else:
-                        my_modifiedList.append(file_name)
+                        # my_modifiedList.append(file_name)
+                        recv_modifiedList.append(file_name)
+
                 else:
                     print('[syncJobTest getJobList func] unexpected pair of event has occured!')
                     print(f'my_event_dictionary[{file_name}][0]=\'{my_event[0]}\'')
@@ -208,16 +220,23 @@ def getJobList(my_event_dictionary,other_event_dictionary):
         if file_name not in my_event_dictionary:
             if other_event_dictionary[file_name][0]=='d':
                 deleteList.append(file_name)
-                continue
+            elif other_event_dictionary[file_name][0] == 'm':
+                recv_modifiedList.append(file_name)
+            elif other_event_dictionary[file_name][0] == 'c':
+                recv_createList.append(file_name)
             else:
-                my_modifiedList.append(file_name)
+                print('[syncJobTest getJobList func] unexpected pair of event has occured!')
+                print(f'my_event_dictionary[{file_name}][0]=\'{my_event[0]}\'')
+                print(f'other_event_dictionary[{file_name}][0]=\'{other_event[0]}\'')
+                sys.exit(1)
+            continue
         else:
             print('[syncJobTest getJobList func] unexpected pair of event has occured!')
             print(f'my_event_dictionary[{file_name}][0]=\'{my_event[0]}\'')
             print(f'other_event_dictionary[{file_name}][0]=\'{other_event[0]}\'')
             sys.exit(1)
 
-    return [deleteList,sendList,my_modifiedList]
+    return [deleteList,sendList,recv_createList,recv_modifiedList]
 
 def deleteFiles(file_list):
     for file_name in file_list:
@@ -269,6 +288,7 @@ def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num):
         print(f'[syncJobTest xcgFiles] sending file {file_name}')
 
         try:
+            file_name=file_name.split("/")[0]
             with open(file_name,'rb') as f:
                 while True:
                     data=f.read(MAX_BUFFER_LEN)

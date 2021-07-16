@@ -1,5 +1,5 @@
 """
-    update: 2021/07/15
+    update: 2021/07/16
 
     initialize folder structure for install (프로그램 설치를 위한 폴더구조 초기화)
 
@@ -137,7 +137,7 @@ class server_thread(threading.Thread):
         self.closeAllSocket()
 
 # ==========================================================================
-def main(port1,port2,syncpath):
+def main(port1,port2,syncpath,interval):
     global install_path
     # check system arguments num
     if len(sys.argv) != 4:
@@ -147,10 +147,11 @@ def main(port1,port2,syncpath):
     # install & setting ========================================================
 
     # set install directory path
-    print("설치할 위치 지정:")
-    install_path=input()
+    install_path=os.getcwd()
     log_path=install_path + '\\syncPro\\log'
-    _logtojson.setLogDir(log_path)
+    # setfile_path=install_path+"\\syncPro\\setting.json'
+    # _logtojson.setLogDir(log_path)
+    # _logtojson.settingFilePath(setfile_path)
     _install.initFolder(install_path)
     print(os.getcwd())
 
@@ -169,7 +170,7 @@ def main(port1,port2,syncpath):
     st.start()
 
     ##
-    install.setting(IP_ADDR,int(port2))
+    install.setting(IP_ADDR,int(port2),interval)
     ##
 
 
@@ -184,89 +185,3 @@ def main(port1,port2,syncpath):
 
 if __name__ == '__main__':
     main(sys.argv[1],sys.argv[2],sys.argv[3])
-
-
-# 초기화에 사용되지 않은 코드 =================================================================
-"""
-# class for defining file system event handler
-class Handler(FileSystemEventHandler):
-    def __init__(self,ip_addr,port_num):
-        self.ip_addr=ip_addr
-        self.port_num= port_num
-        pass
-    def typeNameExtension(self,event):
-        # function for get a full string that expresses what happened to folder
-        return_str=f'event type: {event.event_type}, '
-        fname,ext=os.path.splitext(os.path.basename(event.src_path))
-        return_str+=f'filename: {fname}, extension: {ext}'
-        return return_str
-
-    def getFileName(self, event):
-        fname, ext = os.path.splitext(os.path.basename(event.src_path))
-        filename = fname + ext
-        print(filename)
-        return filename
-
-    #------------------from here to below, all functions works very similarly
-    #------------------all they do is to catch specific event and send packet to server
-    def on_created(self,event):
-        client_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        try:
-            client_socket.connect((self.ip_addr,self.port_num))
-            client_socket.sendall(self.typeNameExtension(event).encode())
-        except socket.error as e:
-            print('[filesystem event handler] socket error occurred:',e)
-        client_socket.close()
-    def on_deleted(self,event):
-        client_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        try:
-            client_socket.connect((self.ip_addr,self.port_num))
-            client_socket.sendall(self.typeNameExtension(event).encode())
-        except socket.error as e:
-            print('[filesystem event handler] socket error occurred:',e)
-        client_socket.close()
-    def on_modified(self,event):
-        client_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        try:
-            client_socket.connect((self.ip_addr,self.port_num))
-            client_socket.sendall(self.typeNameExtension(event).encode())
-        except socket.error as e:
-            print('[filesystem event handler] socket error occurred:',e)
-        client_socket.close()
-    def on_moved(self,event):
-        client_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        try:
-            client_socket.connect((self.ip_addr,self.port_num))
-            client_socket.sendall(self.typeNameExtension(event).encode())
-        except socket.error as e:
-            print('[filesystem event handler] socket error occurred:',e)
-        client_socket.close()
-
-#class for watching a folder
-class Watcher:
-    def __init__(self,path,ip_addr,port_num):
-        self.event_handler = Handler(ip_addr,port_num)
-        self.observer = Observer()
-        self.target_dir= path
-        os.chdir(path)
-        print(f'[filesystem watcher] now watching {os.getcwd()}')
-
-    def currentDirectorySetting(self):
-        #function for change current working directory
-        os.chdir(self.target_dir)
-        print('[filesystem watcher] first directory setting....')
-        print(f'[filesystem watcher] cwd: {os.getcwd()}')
-
-    def run(self):
-        #function for running filesystem watcher
-        self.observer.schedule(self.event_handler,self.target_dir,recursive=False)
-        self.observer.start()
-        #keep watching a folder until a keyboard interrupt comes
-        try:
-            while True:
-                sleep(1)
-        except KeyboardInterrupt as e:
-            print('[filesystem watcher] exiting program...')
-            self.observer.stop()
-            return
-"""
