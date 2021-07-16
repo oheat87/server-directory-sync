@@ -19,7 +19,8 @@ def initFolder(path):
 	],
 	"dirPath": "",
 	"timeInterval": "",
-	"latestSync": "",
+    "startedTime": "",
+	"installTime": "",
 	"install": False
 }, indent=4)
 
@@ -46,7 +47,7 @@ class Install:
         os.chdir(path)
         print(f'[Install] directory path: {os.getcwd()}')
 
-    def setting(self,ip2,port2):
+    def setting(self,ip2,port2,interval):
         setFile = self.install_path + '\\setting.json'
 
         with open(setFile, 'r') as f:
@@ -68,7 +69,9 @@ class Install:
             #install = Install(setting["dirPath"], setting["servers"][1]["ip_2"], int(setting["servers"][1]["port_2"]))
             self.install(ip2,port2)
             setting["install"] = True
-            setting["latestSync"]=time
+            setting["startedTime"]=time
+            setting["installTime"]=time
+            setting["timeInterval"]=interval
             # update json seeting file
             with open(setFile, 'w', encoding='utf-8') as mk:
                 json.dump(setting, mk, indent='\t')
@@ -114,3 +117,6 @@ class Install:
                 print('there is no such file:', e)
             except KeyboardInterrupt:
                 os._exit(0)
+
+def getSetPath():
+    return

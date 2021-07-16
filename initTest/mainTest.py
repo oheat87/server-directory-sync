@@ -1,11 +1,14 @@
 """
-    update: 2021/07/15
+    update: 2021/07/16
 
     store logs to the [date].json file (동기화 프로그램의 과정을 로그파일로 저장)
 
     구현내용:
     1. store logs of create or delete files in [date].json (파일 생성, 삭제에대한 동기화 로그 저장)
+        +5. add 'modified' flag
     2. merge code with rttTest.py (코드 merge)
+    3. change the install path & get the arguments from setting file (설치위치 수정, 설치 후 값을 setting파일에서 읽어오기)
+    4. setting.json: 'latestsync'->'installTime', add & update 'startedTime'
 
 """
 
@@ -30,6 +33,8 @@ import rttTest
 
 #install & init_setting
 import initTest
+import json
+import datetime
 
 #some constants
 MAX_LISTEN = 100
@@ -95,59 +100,6 @@ class fsTracker():
             print(self.dictionary[file_name][1])
         print('-------------------------------------------------------------------')
 
-#class for server threading
-# class server_thread(threading.Thread):
-#     def __init__(self,name, socket):
-#         super().__init__()
-#         self.name = name
-#         self.server_socket= socket
-#         self.connection_socket=None
-#
-#     def run(self):
-#         # run server thread by listening to server listening socket and
-#         # by responding to connection socket
-#         print('[server thread] start ', threading.currentThread().getName())
-#         try:
-#             while True:
-#                 self.connection_socket,addr = self.server_socket.accept()
-#                 print('[server thread] access from',str(addr),'accepted')
-#
-#                 data = self.connection_socket.recv(MAX_BUFFER_LEN)
-#                 msg= data.decode('utf-8')
-#                 print('[server thread] another server file modification:',msg)
-#
-#                 self.connection_socket.close()
-#                 self.connection_socket=None
-#         except socket.error as e:
-#             print('[server thread] socket error debug:',e)
-#             print('[server thread] exiting....')
-#
-#         # before finishing, close all the sockets this server thread has
-#         self.closeAllSocket()
-#         print('[server thread] end ', threading.currentThread().getName())
-#     def stop(self):
-#         # stop server thread by closing all the sockets that this thread has
-#         self.closeAllSocket()
-#     def closeAllSocket(self):
-#         # method for close all sockets that this server thread has
-#         # first, close server listening socket
-#         try:
-#             if self.server_socket.fileno()>=0:
-#                 self.server_socket.close()
-#                 print('[server thread] server socket closed')
-#         except socket.error as e:
-#             print('[server thread] server socket has already been closed')
-#             print('[server thread] exception content:',e)
-#         # second, close server connection socket
-#         try:
-#             if self.connection_socket is not None and self.connection_socket.fileno()>=0:
-#                 self.connection_socket.close()
-#                 print('[server thread] server connection socket closed')
-#         except socket.error as e:
-#             print('[server thread] connection socket has already been closed')
-#             print('[server thread] exception content:',e)
-
-# class for defining file system event handler
 
 class Handler(FileSystemEventHandler):
     def __init__(self):
@@ -225,25 +177,40 @@ if __name__ == '__main__':
 ##    if len(sys.argv)!=4:
 ##        print('wrong system arguments!')
 ##        sys.exit(1)
+    install_path=os.getcwd()+"\\syncPro"
+    if os.path.exists(install_path+"\\setting.json"):
+        with open(install_path+"\\setting.json",'r') as f:
+            setting = json.load(f)
+        #---------- time synchronization process
+        print('[main thread] doing time synchronization')
+        prev_endtime=rttTest.waitToSync(IP_ADDR,int(setting["servers"][0]["port_1"]),int(setting["servers"][1]["port_2"]))
+        print('[main thread] time synchronization done')
+
+        # re-start the program
+        log_path = initTest.main(int(setting["servers"][0]["port_1"]),int(setting["servers"][1]["port_2"]),setting["dirPath"],DEFAULT_TIME_INTERVAL)
+
+
 
     ### install start ==========================================
-    # TODO
-    # install 한 번만 실행할 수 있게 보완 필요
-    log_path = initTest.main(sys.argv[1],sys.argv[2],sys.argv[3])
+    if not os.path.exists(install_path):
+        prev_endtime=rttTest.waitToSync(IP_ADDR,int(sys.argv[1]),int(sys.argv[2]))
+        log_path = initTest.main(sys.argv[1],sys.argv[2],sys.argv[3],DEFAULT_TIME_INTERVAL)
+
+    with open(install_path+"\\setting.json",'r') as f:
+        setting = json.load(f)
+    # update started time
+    setting["startedTime"]=str(datetime.datetime.now()).replace(":", "-")[:-3]
+    with open(install_path+"\\setting.json", 'w', encoding='utf-8') as mk:
+        json.dump(setting, mk, indent='\t')
     # log 저장 위치를 return 받음
     ### install end ============================================
 
-
-    #---------- time synchronization process
-    print('[main thread] doing time synchronization')
-    prev_endtime=rttTest.waitToSync(IP_ADDR,int(sys.argv[1]),int(sys.argv[2]))
-    print('[main thread] time synchronization done')
 
 
     #---------- make filesystem watcher and do synchronization process on every time interval
     while True:
         prev_endtime+=DEFAULT_TIME_INTERVAL
-        watcher = Watcher(sys.argv[3],prev_endtime)
+        watcher = Watcher(setting["dirPath"],prev_endtime)
         do_synchronization = watcher.run()
         if not do_synchronization:
             break
@@ -258,7 +225,7 @@ if __name__ == '__main__':
         print('JSON file',JSON_fname,'successfully created')
 
         # receive&load track data
-        received_fname= newTmpTest.exchangeTrackData(JSON_fname,IP_ADDR,int(sys.argv[1]),int(sys.argv[2]))
+        received_fname= newTmpTest.exchangeTrackData(JSON_fname,IP_ADDR,int(setting["servers"][0]["port_1"]),int(setting["servers"][1]["port_2"]))
         received_trackData= newTmpTest.loadJSON(received_fname)
 
         # delete temporary JSON files
@@ -271,7 +238,9 @@ if __name__ == '__main__':
 ##        print('------------------received Track Data--------------------')
 ##        tds.printContent()
         
-        deleteList,sendList,my_modifiedList=syncJobTest.getJobList(ds.getContent(),received_trackData)
+        # deleteList,sendList,my_modifiedList=syncJobTest.getJobList(ds.getContent(),received_trackData)
+        deleteList,sendList,recv_createList,recv_modifiedList=syncJobTest.getJobList(ds.getContent(),received_trackData)
+
         # here, need to delete dictionaries!!!!
         ds.resetContent()
         del received_trackData
@@ -282,8 +251,12 @@ if __name__ == '__main__':
         for fname in deleteList: print(fname)
         print('------------send List----------------')
         for fname in sendList: print(fname)
+        # print('------------modified List----------------')
+        # for fname in my_modifiedList: print(fname)
+        print('------------create List----------------')
+        for fname in recv_createList: print(fname)
         print('------------modified List----------------')
-        for fname in my_modifiedList: print(fname)
+        for fname in recv_modifiedList: print(fname)
         
         #first, delete files to synchronize
         #we can do some file backup operations here before really delete the file
@@ -295,10 +268,9 @@ if __name__ == '__main__':
         #second, send newly created and modified files to other side
         #we can do some file backup operations here before really overwrite the file
         #use my_modifiedList
-        #TODO
         pass
         #do file exchange and overwrite via socket communication
-        syncJobTest.exchangeFiles(sendList,IP_ADDR,int(sys.argv[1]),int(sys.argv[2]))
+        syncJobTest.exchangeFiles(sendList,IP_ADDR,int(setting["servers"][0]["port_1"]),int(setting["servers"][1]["port_2"]))
 
         # clean instance memory
         del watcher

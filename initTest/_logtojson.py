@@ -7,6 +7,8 @@ import traceback
 # BASE_DIR=os.path.abspath(os.getcwd())
 # LOG_DIR=os.path.join(BASE_DIR,"saveLog")
 
+LOG_DIR=os.getcwd() + '\\syncPro\\log'
+
 time = str(datetime.datetime.now()).replace(":", "-")[:-3]
 date = str(datetime.date.today())
 
@@ -79,8 +81,7 @@ class JsonLogger(logging.Logger):
     level = None
     mode = None
 
-    def __init__(self, time, process, level=logging.INFO, console_level=logging.INFO, mode="a"):
-        # self.name = time
+    def __init__(self, time, process, level=logging.INFO, mode="a"):
         self.time = time
 
         logging.Logger.__init__(self, name=process)
@@ -100,14 +101,7 @@ class JsonLogger(logging.Logger):
         file_handle.setFormatter(json_formatter)
         file_handle.addFilter(json_logging_filter)
 
-        # console log
-        console_handle = logging.StreamHandler()
-        console_handle.setLevel(console_level)
-        console_handle.setFormatter(json_formatter)
-        console_handle.addFilter(json_logging_filter)
-
         self.logger.addHandler(file_handle)
-        self.logger.addHandler(console_handle)
 
     def getLogger(self):
         return self.logger
@@ -120,13 +114,6 @@ def run(process):
     my_logger = JsonLogger(f"{date}",process).getLogger()
     return my_logger,time
 
-    # my_logger.info(info)
-
-    #try:
-    #    open('./my-log.json', 'rb')
-    #except FileNotFoundError as e:
-    #    my_logger.exception("file exception", exc_info=e)
-
 def log2json():
     with open(LOG_DIR+'\\'+f'{date}.json','r') as f:
         f=list(f)
@@ -137,6 +124,7 @@ def log2json():
     with open(LOG_DIR+'\\'+f'{date}.json','w') as f:
         f.writelines(json.dumps(logList,indent=4))
 
+
 def json2log():
     with open(LOG_DIR+'\\'+f'{date}.json','r') as f:
         s = json.load(f)
@@ -144,6 +132,3 @@ def json2log():
         for data in s:
             f.write(str(data) + "\n")
 
-def setLogDir(path):
-    global LOG_DIR
-    LOG_DIR=path+""
