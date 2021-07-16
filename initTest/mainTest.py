@@ -39,8 +39,8 @@ import datetime
 #some constants
 MAX_LISTEN = 100
 MAX_BUFFER_LEN= 1024
-##IP_ADDR = '192.168.2.53'
-IP_ADDR = '127.0.0.1'
+IP_ADDR = '192.168.2.60'
+# IP_ADDR = '127.0.0.1'
 DEFAULT_TIME_INTERVAL=30
 
 #debug constants
