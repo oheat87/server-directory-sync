@@ -107,9 +107,9 @@ class server_thread(threading.Thread):
             print('[server thread] exiting....')
 
         # re-start
-        install_path = os.getcwd() + "\\syncPro"
-        if os.path.exists(install_path + "\\setting.json"):
-            with open(install_path + "\\setting.json", 'r') as f:
+        install_path = os.path.join(os.getcwd(),"syncPro")
+        if os.path.exists(os.path.join(install_path,"setting.json")):
+            with open(os.path.join(install_path,"setting.json"), 'r') as f:
                 setting = json.load(f)
             if setting["install"]==True:
                 _logtojson.json2log()
@@ -156,10 +156,7 @@ def main(port1,port2,syncpath,interval):
 
     # set install directory path
     install_path=os.getcwd()
-    log_path=install_path + '\\syncPro\\log'
-    # setfile_path=install_path+"\\syncPro\\setting.json'
-    # _logtojson.setLogDir(log_path)
-    # _logtojson.settingFilePath(setfile_path)
+    log_path=os.path.join(install_path , '/syncPro/log')
     _install.initFolder(install_path)
     print(os.getcwd())
 

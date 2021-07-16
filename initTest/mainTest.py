@@ -177,9 +177,9 @@ if __name__ == '__main__':
 ##    if len(sys.argv)!=4:
 ##        print('wrong system arguments!')
 ##        sys.exit(1)
-    install_path=os.getcwd()+"\\syncPro"
-    if os.path.exists(install_path+"\\setting.json"):
-        with open(install_path+"\\setting.json",'r') as f:
+    install_path=os.path.join(os.getcwd(),"syncPro")
+    if os.path.exists(os.path.join(install_path,"setting.json")):
+        with open(os.path.join(install_path,"setting.json"),'r') as f:
             setting = json.load(f)
         #---------- time synchronization process
         print('[main thread] doing time synchronization')
@@ -196,11 +196,11 @@ if __name__ == '__main__':
         prev_endtime=rttTest.waitToSync(IP_ADDR,int(sys.argv[1]),int(sys.argv[2]))
         log_path = initTest.main(sys.argv[1],sys.argv[2],sys.argv[3],DEFAULT_TIME_INTERVAL)
 
-    with open(install_path+"\\setting.json",'r') as f:
+    with open(os.path.join(install_path,"setting.json"),'r') as f:
         setting = json.load(f)
     # update started time
     setting["startedTime"]=str(datetime.datetime.now()).replace(":", "-")[:-3]
-    with open(install_path+"\\setting.json", 'w', encoding='utf-8') as mk:
+    with open(os.path.join(install_path,"setting.json"), 'w', encoding='utf-8') as mk:
         json.dump(setting, mk, indent='\t')
     # log 저장 위치를 return 받음
     ### install end ============================================
