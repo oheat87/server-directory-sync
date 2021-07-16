@@ -7,7 +7,7 @@ import traceback
 # BASE_DIR=os.path.abspath(os.getcwd())
 # LOG_DIR=os.path.join(BASE_DIR,"saveLog")
 
-LOG_DIR=os.getcwd() + '\\syncPro\\log'
+LOG_DIR=os.path.join(os.getcwd() ,'syncPro/log')
 
 time = str(datetime.datetime.now()).replace(":", "-")[:-3]
 date = str(datetime.date.today())
@@ -115,20 +115,20 @@ def run(process):
     return my_logger,time
 
 def log2json():
-    with open(LOG_DIR+'\\'+f'{date}.json','r') as f:
+    with open(os.path.join(LOG_DIR,f'{date}.json'),'r') as f:
         f=list(f)
         logList=[]
         if len(f)>0:
             for singleLog in f:
                 logList.append(eval(singleLog))
-    with open(LOG_DIR+'\\'+f'{date}.json','w') as f:
+    with open(os.path.join(LOG_DIR,f'{date}.json'),'w') as f:
         f.writelines(json.dumps(logList,indent=4))
 
 
 def json2log():
-    with open(LOG_DIR+'\\'+f'{date}.json','r') as f:
+    with open(os.path.join(LOG_DIR,f'{date}.json'),'r') as f:
         s = json.load(f)
-    with open(LOG_DIR+'\\'+f'{date}.json','w') as f:
+    with open(os.path.join(LOG_DIR,f'{date}.json'),'w') as f:
         for data in s:
             f.write(str(data) + "\n")
 

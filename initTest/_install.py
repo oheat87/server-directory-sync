@@ -26,11 +26,11 @@ def initFolder(path):
 
     try:
         if os.path.isdir(path):
-            install_path=path+'\\syncPro'
+            install_path=os.path.join(path,'syncPro')
             os.makedirs(install_path)
-            os.makedirs(install_path+'\\backup')
-            os.makedirs(install_path+'\\log')
-            f=open(install_path+'\\setting.json','w')
+            os.makedirs(os.path.join(install_path,'backup'))
+            os.makedirs(os.path.join(install_path+'log'))
+            f=open(os.path.join(install_path,'setting.json'),'w')
             f.writelines(setting_format)
             f.close()
     except OSError:
@@ -42,13 +42,13 @@ class Install:
         self.ip_addr = ip_addr
         self.port_num = int(port_num)
         self.target_dir = path
-        self.install_path=install_path+'\\syncPro'
+        self.install_path=os.path.join(install_path,'syncPro')
         install_log, time = _logtojson.run('install')
         os.chdir(path)
         print(f'[Install] directory path: {os.getcwd()}')
 
     def setting(self,ip2,port2,interval):
-        setFile = self.install_path + '\\setting.json'
+        setFile = os.path.join(self.install_path , 'setting.json')
 
         with open(setFile, 'r') as f:
             setting = json.load(f)
