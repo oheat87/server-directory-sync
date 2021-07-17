@@ -42,8 +42,8 @@ install = False  # 일단은 global변수로 선언하고 json설정파일에 �
 #some constants
 MAX_LISTEN = 100
 MAX_BUFFER_LEN= 1024
-IP_ADDR = '192.168.2.60'
-# IP_ADDR = '127.0.0.1'
+# IP_ADDR = '192.168.2.60'
+IP_ADDR = '127.0.0.1'
 DEFAULT_TIME_INTERVAL=120
 
 
@@ -168,6 +168,7 @@ def main(port1,port2,syncpath,interval):
     # ==========================================================================
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind(('', int(port1)))
     server_socket.listen(MAX_LISTEN)
 
