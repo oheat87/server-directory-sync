@@ -35,6 +35,7 @@ import rttTest
 import initTest
 import json
 import datetime
+import _install
 
 #some constants
 MAX_LISTEN = 100
@@ -181,6 +182,12 @@ if __name__ == '__main__':
     if os.path.exists(os.path.join(install_path,"setting.json")):
         with open(os.path.join(install_path,"setting.json"),'r') as f:
             setting = json.load(f)
+
+        if setting["install"]==False:
+            print("=============unInstall start=================")
+            if setting["installTime"]!="":
+                _install.unInstall(install_path,setting["dirPath"])
+
         #---------- time synchronization process
         print('[main thread] doing time synchronization')
         prev_endtime=rttTest.waitToSync(IP_ADDR,int(setting["servers"][0]["port_1"]),int(setting["servers"][1]["port_2"]))
@@ -202,7 +209,7 @@ if __name__ == '__main__':
     setting["startedTime"]=str(datetime.datetime.now()).replace(":", "-")[:-3]
     with open(os.path.join(install_path,"setting.json"), 'w', encoding='utf-8') as mk:
         json.dump(setting, mk, indent='\t')
-    # log 저장 위치를 return 받음
+
     ### install end ============================================
 
 

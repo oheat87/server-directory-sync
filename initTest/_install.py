@@ -1,7 +1,10 @@
 import os
 import socket
 import json
+import zipfile
 import _logtojson
+import sys
+import shutil
 
 MAX_BUFFER_LEN=1024
 
@@ -47,7 +50,7 @@ class Install:
         os.chdir(path)
         print(f'[Install] directory path: {os.getcwd()}')
 
-    def setting(self,ip2,port2,interval):
+    def initSet(self,ip2,port2,interval):
         setFile = os.path.join(self.install_path , 'setting.json')
 
         with open(setFile, 'r') as f:
@@ -65,19 +68,22 @@ class Install:
             with open(setFile, 'w', encoding='utf-8') as mk:
                 json.dump(setting, mk, indent='\t')
 
-        if setting["install"] == False:
             #install = Install(setting["dirPath"], setting["servers"][1]["ip_2"], int(setting["servers"][1]["port_2"]))
             self.install(ip2,port2)
-            setting["install"] = True
             setting["startedTime"]=time
-            setting["installTime"]=time
             setting["timeInterval"]=interval
+            setting["install"] = True
+            setting["installTime"]=time
+
             # update json seeting file
             with open(setFile, 'w', encoding='utf-8') as mk:
                 json.dump(setting, mk, indent='\t')
 
             # json format
             # _logtojson.log2json()
+
+            # Back Up
+            self.backUp(time)
 
             print("[install status] success!")
 
@@ -118,5 +124,49 @@ class Install:
             except KeyboardInterrupt:
                 os._exit(0)
 
-def getSetPath():
-    return
+    def backUp(self,time):
+        filename=os.path.join("backup",time+'.zip')
+        new_zip = zipfile.ZipFile(os.path.join(self.install_path,filename), 'w')
+
+        backup_target = self.target_dir
+
+        for folder, subfolders, files in os.walk(backup_target):
+            for file in files:
+                new_zip.write(os.path.join(folder, file),
+                              os.path.relpath(os.path.join(folder, file), backup_target),
+                              compress_type=zipfile.ZIP_DEFLATED)
+
+        new_zip.close()
+
+
+
+def unInstall(install_path,target_dir):
+    #Recovery
+    setFile = os.path.join(install_path , 'setting.json')
+
+    with open(setFile, 'r') as f:
+        setting = json.load(f)
+
+    # remove all files in targetDir
+    target_dir_list=os.listdir(target_dir)
+    for filename in target_dir_list:
+        if os.path.isfile(os.path.join(target_dir,filename)):
+            os.remove(os.path.join(target_dir,filename))
+    # success to remove all files in targetDir
+
+
+    # run recovery
+    install_time=setting["installTime"]
+    filename = os.path.join("backup", install_time + '.zip')
+    with zipfile.ZipFile(os.path.join(install_path,filename), 'r') as recov_zip:
+        recov_zip.extractall(target_dir)
+
+
+    # os.rmdir(self.install_path) # remove all
+    print("=============unInstall Success!=================")
+
+    # remove program folder
+    shutil.rmtree(install_path)
+
+    sys.exit(0)
+
