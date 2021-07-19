@@ -114,6 +114,13 @@ class server_thread(threading.Thread):
             if setting["install"]==True:
                 _logtojson.json2log()
 
+            # unInstall?
+            # if setting["install"]==False:
+            #     print("=============unInstall start=================")
+            #     if setting["installTime"]=="":
+            #         _install.unInstall(install_path,setting["dirPath"])
+
+
         # json format
         _logtojson.log2json()
 
@@ -176,7 +183,7 @@ def main(port1,port2,syncpath,interval):
     st.start()
 
     ##
-    install.setting(IP_ADDR,int(port2),interval)
+    install.initSet(IP_ADDR,int(port2),interval)
     ##
 
 
