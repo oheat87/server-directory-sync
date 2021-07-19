@@ -10,11 +10,17 @@ import os
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from watchdog.events import PatternMatchingEventHandler
+from watchdog.events import DirCreatedEvent
+from watchdog.events import DirMovedEvent
+from watchdog.events import DirModifiedEvent
+from watchdog.events import DirDeletedEvent
+
 
 #import user module
 import newTmpTest
 import syncJobTest
 import rttTest
+import backupTest
 
 #some constants
 MAX_LISTEN = 100
@@ -64,6 +70,8 @@ class fsTracker():
                 print('[fsTracker.pushEvent] invalid file operation sequence occured')
                 return
 
+    def checkTracked(self,fname):
+        return fname in self.dictionary
     def getContent(self):
         return self.dictionary
     def delContent(self):
@@ -134,8 +142,9 @@ class server_thread(threading.Thread):
 
 # class for defining file system event handler
 class Handler(FileSystemEventHandler):
-    def __init__(self):
+    def __init__(self,ignore_directories=True):
         self.tracker= fsTracker()
+        self.ignore_directories=ignore_directories
         pass
     def typeNameExtension(self,event):
         # function for get a full string that expresses what happened to folder
@@ -144,14 +153,30 @@ class Handler(FileSystemEventHandler):
         return_str+=f'filename: {fname}, extension: {ext}'
         return return_str
     def on_created(self,event):
-        self.tracker.pushEvent(os.path.basename(event.src_path),'c',time.time())
+        if self.ignore_directories and type(event) is DirCreatedEvent:
+            pass
+        else:
+            self.tracker.pushEvent(os.path.basename(event.src_path),'c',time.time())
+##        print(type(event))
     def on_deleted(self,event):
-        self.tracker.pushEvent(os.path.basename(event.src_path),'d',time.time())
+        if self.ignore_directories and type(event) is DirDeletedEvent:
+            pass
+        else:
+            self.tracker.pushEvent(os.path.basename(event.src_path),'d',time.time())
+##        print(type(event))
     def on_modified(self,event):
-        self.tracker.pushEvent(os.path.basename(event.src_path),'m',time.time())
+        if self.ignore_directories and type(event) is DirModifiedEvent:
+            pass
+        else:
+            self.tracker.pushEvent(os.path.basename(event.src_path),'m',time.time())
+##        print(type(event))
     def on_moved(self,event):
-        self.tracker.pushEvent(os.path.basename(event.src_path),'d',time.time())
-        self.tracker.pushEvent(os.path.basename(event.dest_path),'c',time.time())
+        if self.ignore_directories and type(event) is DirMovedEvent:
+            pass
+        else:
+            self.tracker.pushEvent(os.path.basename(event.src_path),'d',time.time())
+            self.tracker.pushEvent(os.path.basename(event.dest_path),'c',time.time())
+##        print(type(event))
 
     # function for getting tracker instance being used
     def getTracker(self):
@@ -212,6 +237,10 @@ if __name__ == '__main__':
 ##        print('wrong system arguments!')
 ##        sys.exit(1)
 
+    #---------- save cwd & pass target path to backupTest module
+    print('[main thread] saving paths')
+    backupTest.setPaths(os.getcwd(),sys.argv[3])
+    
     #---------- time synchronization process
     print('[main thread] doing time synchronization')
     prev_endtime=rttTest.waitToSync(IP_ADDR,int(sys.argv[1]),int(sys.argv[2]))
@@ -219,6 +248,11 @@ if __name__ == '__main__':
 
     #---------- make filesystem watcher and do synchronization process on every time interval
     while True:
+        #do directory backup
+        print('[main thread] doing directory backup')
+        backupTest.backupDir(backupTest.ARCHIVE_PATH,backupTest.TARGET_PATH)
+        print('[main thread] directory backup done')
+        
         prev_endtime+=DEFAULT_TIME_INTERVAL
         watcher= Watcher(sys.argv[3],prev_endtime)
         do_synchronization= watcher.run()
