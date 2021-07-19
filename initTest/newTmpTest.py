@@ -103,6 +103,7 @@ def getJSONName():
 def exchangeTrackData(file_name, ip_addr, my_port_num, other_port_num):
     #---------- server part
     server_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind(('', my_port_num))
     server_socket.listen(MAX_LISTEN)
 
