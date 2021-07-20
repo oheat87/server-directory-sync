@@ -264,7 +264,13 @@ def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num):
     #---------------client part
     #first, handshake with server 
     handshake_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    handshake_socket.connect((ip_addr,other_port_num))
+    while True:
+        try:
+            handshake_socket.connect((ip_addr,other_port_num))
+        except ConnectionRefusedError:
+            time.sleep(0.001)
+            continue
+        break
     handshake_socket.sendall(HANDSHAKE_STR_INIT.encode('utf-8'))
     handshake_socket.recv(MAX_BUFFER_LEN)
     handshake_socket.sendall(str(len(file_list)).encode('utf-8'))
