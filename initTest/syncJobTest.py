@@ -89,9 +89,7 @@ class files_server_thread(threading.Thread):
 
                 # get filename
                 data = self.connection_socket.recv(MAX_BUFFER_LEN)
-                file_name= data.decode('utf-8')
-                file_flag=file_name.split("/")[1]
-                file_name=file_name.split("/")[0]
+                file_name, file_flag= data.decode('utf-8').split('/')
 
                 self.connection_socket.sendall(HANDSHAKE_STR_FILE_ACK.encode('utf-8'))
 
@@ -99,19 +97,19 @@ class files_server_thread(threading.Thread):
                 with open(file_name,'wb') as f:
                     while True:
                         data = self.connection_socket.recv(MAX_BUFFER_LEN)
-                        if file_flag=='c':changeState="create"
-                        if file_flag=='m':changeState="modified"
                         if not data:
-                            ### save logs =====================================
-                            _logtojson.json2log()
-                            log_file, log_time = _logtojson.run('sync')
-                            log_file.info(f"{file_name}/{changeState}")
-                            ### re-format to .json
-                            _logtojson.log2json()
-                            ### ===============================================
                             break
                         f.write(data)
 
+                ### save logs =====================================
+                if file_flag=='c':changeState="create"
+                elif file_flag=='m':changeState="modified"
+                _logtojson.json2log()
+                log_file, log_time = _logtojson.run('sync')
+                log_file.info(f"{file_name}/{changeState}")
+                ### re-format to .json
+                _logtojson.log2json()
+                ### ===========================================
                 print(f'[files_server thread] {file_name} successfully received')
 
                 self.connection_socket.close()
