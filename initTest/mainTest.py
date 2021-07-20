@@ -25,6 +25,11 @@ import os
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from watchdog.events import PatternMatchingEventHandler
+from watchdog.events import DirCreatedEvent
+from watchdog.events import DirMovedEvent
+from watchdog.events import DirModifiedEvent
+from watchdog.events import DirDeletedEvent
+
 
 #import user module
 import newTmpTest
@@ -36,6 +41,7 @@ import initTest
 import json
 import datetime
 import _install
+import backupTest
 
 #some constants
 MAX_LISTEN = 100
@@ -85,6 +91,9 @@ class fsTracker():
                 print('[fsTracker.pushEvent] invalid file operation sequence occured')
                 return
 
+    def checkTracked(self,fname):
+        return fname in self.dictionary
+
     def getContent(self):
         return self.dictionary
     def delContent(self):
@@ -103,28 +112,52 @@ class fsTracker():
 
 
 class Handler(FileSystemEventHandler):
-    def __init__(self):
-        self.tracker= fsTracker()
+    def __init__(self, ignore_directories=True):
+        self.tracker = fsTracker()
+        self.ignore_directories = ignore_directories
         pass
-    def typeNameExtension(self,event):
+
+    def typeNameExtension(self, event):
         # function for get a full string that expresses what happened to folder
-        return_str=f'event type: {event.event_type}, '
-        fname,ext=os.path.splitext(os.path.basename(event.src_path))
-        return_str+=f'filename: {fname}, extension: {ext}'
+        return_str = f'event type: {event.event_type}, '
+        fname, ext = os.path.splitext(os.path.basename(event.src_path))
+        return_str += f'filename: {fname}, extension: {ext}'
         return return_str
-    def on_created(self,event):
-        self.tracker.pushEvent(os.path.basename(event.src_path),'c',time.time())
-    def on_deleted(self,event):
-        self.tracker.pushEvent(os.path.basename(event.src_path),'d',time.time())
-    def on_modified(self,event):
-        self.tracker.pushEvent(os.path.basename(event.src_path),'m',time.time())
-    def on_moved(self,event):
-        self.tracker.pushEvent(os.path.basename(event.src_path),'d',time.time())
-        self.tracker.pushEvent(os.path.basename(event.dest_path),'c',time.time())
+
+    def on_created(self, event):
+        if self.ignore_directories and type(event) is DirCreatedEvent:
+            pass
+        else:
+            self.tracker.pushEvent(os.path.basename(event.src_path), 'c', time.time())
+
+    ##        print(type(event))
+    def on_deleted(self, event):
+        if self.ignore_directories and type(event) is DirDeletedEvent:
+            pass
+        else:
+            self.tracker.pushEvent(os.path.basename(event.src_path), 'd', time.time())
+
+    ##        print(type(event))
+    def on_modified(self, event):
+        if self.ignore_directories and type(event) is DirModifiedEvent:
+            pass
+        else:
+            self.tracker.pushEvent(os.path.basename(event.src_path), 'm', time.time())
+
+    ##        print(type(event))
+    def on_moved(self, event):
+        if self.ignore_directories and type(event) is DirMovedEvent:
+            pass
+        else:
+            self.tracker.pushEvent(os.path.basename(event.src_path), 'd', time.time())
+            self.tracker.pushEvent(os.path.basename(event.dest_path), 'c', time.time())
+
+    ##        print(type(event))
 
     # function for getting tracker instance being used
     def getTracker(self):
         return self.tracker
+
     # function for clear memory of dictionary instance
     def delTracker(self):
         self.tracker.delContent()
@@ -178,6 +211,11 @@ if __name__ == '__main__':
 ##    if len(sys.argv)!=4:
 ##        print('wrong system arguments!')
 ##        sys.exit(1)
+    #---------- save cwd & pass target path to backupTest module
+    print('[main thread] saving paths')
+    backupTest.setPaths(os.getcwd(),sys.argv[3])
+
+
     install_path=os.path.join(os.getcwd(),"syncPro")
     if os.path.exists(os.path.join(install_path,"setting.json")):
         with open(os.path.join(install_path,"setting.json"),'r') as f:
@@ -216,6 +254,12 @@ if __name__ == '__main__':
 
     #---------- make filesystem watcher and do synchronization process on every time interval
     while True:
+        #do directory backup
+        print('[main thread] doing directory backup')
+        backupTest.backupDir(backupTest.ARCHIVE_PATH,backupTest.TARGET_PATH)
+        print('[main thread] directory backup done')
+
+
         prev_endtime+=DEFAULT_TIME_INTERVAL
         watcher = Watcher(setting["dirPath"],prev_endtime)
         do_synchronization = watcher.run()
