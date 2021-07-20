@@ -270,9 +270,19 @@ def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num):
             continue
         break
     handshake_socket.sendall(HANDSHAKE_STR_INIT.encode('utf-8'))
-    handshake_socket.recv(MAX_BUFFER_LEN)
+    while True:
+        try:
+            handshake_socket.recv(MAX_BUFFER_LEN)
+            break
+        except ConnectionResetError:
+            pass
     handshake_socket.sendall(str(len(file_list)).encode('utf-8'))
-    handshake_socket.recv(MAX_BUFFER_LEN)
+    while True:
+        try:
+            handshake_socket.recv(MAX_BUFFER_LEN)
+            break
+        except ConnectionResetError:
+            pass
     handshake_socket.close()
     print('[syncJobTest xcgFiles] first handshaking done')
     
