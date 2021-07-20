@@ -32,7 +32,7 @@ def initFolder(path):
             install_path=os.path.join(path,'syncPro')
             os.makedirs(install_path)
             os.makedirs(os.path.join(install_path,'backup'))
-            os.makedirs(os.path.join(install_path+'log'))
+            os.makedirs(os.path.join(install_path,'log'))
             f=open(os.path.join(install_path,'setting.json'),'w')
             f.writelines(setting_format)
             f.close()

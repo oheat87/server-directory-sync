@@ -163,7 +163,7 @@ def main(port1,port2,syncpath,interval):
 
     # set install directory path
     install_path=os.getcwd()
-    log_path=os.path.join(install_path , '/syncPro/log')
+    log_path=os.path.join(install_path , 'syncPro' , 'log')
     _install.initFolder(install_path)
     print(os.getcwd())
 
