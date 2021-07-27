@@ -126,6 +126,8 @@ class Install:
             filenum=int(filenum)
             print("filenums:",filenum)
 
+            install_socket.sendall('success'.encode())
+
             for i in range(filenum):
                 file = install_socket.recv(MAX_BUFFER_LEN).decode()  # 파일이름 받아옴
                 print(f"send file [{filepath}/{file}] to server")

@@ -107,6 +107,10 @@ class server_thread(threading.Thread):
                 diff = list(set(filelist).difference(set(my_filelist)))
                 print(diff)
                 self.connection_socket.sendall(bytes(str(len(diff)).encode()))
+
+                recv=self.connection_socket.recv(MAX_BUFFER_LEN)
+                print("[send filenums]",recv)
+
                 for item in diff:
                     # 여기서 diff 결과를 상대방에게 전달하여 없는 파일을 서버로 전송될 수 있게
                     file=item
