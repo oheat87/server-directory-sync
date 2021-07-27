@@ -88,41 +88,62 @@ class Install:
             print("[install status] success!")
 
     def install(self,ip2,port2):
-        while True:
+
+        # 수정: 하위폴더가 존재할 시, 하위폴더 우선 동기화
+        for (path, dir, files) in os.walk(self.target_dir):
+            # SOCKET
             connect = False
             while not connect:
                 try:
                     install_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    install_socket.connect((ip2,port2))
+                    install_socket.connect((ip2, port2))
                     connect = True
                 except ConnectionRefusedError:  # 서버 연결 열릴 때 까지 대기
                     continue
 
-            filelist = os.listdir(self.target_dir)
+            print("os.walk:",path,dir,files)
+            # PATH
+            filepath=path.replace(self.target_dir,"/")
+            install_socket.sendall(str(filepath).encode())
+            recv=install_socket.recv(MAX_BUFFER_LEN).decode() # path received
+            print("[install msg]",recv)
+            filepath=filepath[1:]
 
-            # 하위폴더 ignore
-            for _ in filelist:
-                if os.path.isdir(self.target_dir + '/' + _):
-                    filelist.remove(_)
+            # DIR
+            install_socket.sendall(str(dir).encode())
+            recv=install_socket.recv(MAX_BUFFER_LEN) # dir list received
+            print("[install msg]",recv)
 
-            install_socket.sendall(str(filelist).encode())
+            # FILE
+            install_socket.sendall(str(files).encode())
+            recv=install_socket.recv(MAX_BUFFER_LEN) # file list received
+            print("[install msg]",recv)
 
-            file = install_socket.recv(MAX_BUFFER_LEN)  # 파일이름 받아옴
-            print(f"send file [{file}] to server")
-            if not file:
-                break
-            try:
-                with open(file.decode(), 'rb') as f:
-                    while True:
-                        data = f.read(MAX_BUFFER_LEN)
-                        if not data:
-                            break
-                        install_socket.sendall(data)
-                install_socket.close()
-            except OSError as e:
-                print('there is no such file:', e)
-            except KeyboardInterrupt:
-                os._exit(0)
+            ####
+            install_socket.sendall('request to get filenum'.encode())
+
+            filenum=install_socket.recv(MAX_BUFFER_LEN).decode()
+            filenum=int(filenum)
+            print("filenums:",filenum)
+
+            for i in range(filenum):
+                file = install_socket.recv(MAX_BUFFER_LEN).decode()  # 파일이름 받아옴
+                print(f"send file [{filepath}/{file}] to server")
+                filepath=os.path.join(filepath,file)
+                if not file:
+                    break
+                try:
+                    with open(os.path.join(path,file), 'rb') as f:
+                        while True:
+                            data = f.read(MAX_BUFFER_LEN)
+                            if not data:
+                                break
+                            install_socket.sendall(data)
+                except OSError as e:
+                    print('there is no such file:', e)
+                except KeyboardInterrupt:
+                    os._exit(0)
+            install_socket.close()
 
     def backUp(self,time):
         filename=os.path.join("backup",time+'.zip')

@@ -41,11 +41,9 @@ install = False  # 일단은 global변수로 선언하고 json설정파일에 �
 
 #some constants
 MAX_LISTEN = 100
-MAX_BUFFER_LEN= 1024
+MAX_BUFFER_LEN = 1024
 # IP_ADDR = '192.168.2.60'
 IP_ADDR = '127.0.0.1'
-DEFAULT_TIME_INTERVAL=120
-
 
 #class for server threading
 class server_thread(threading.Thread):
@@ -65,41 +63,70 @@ class server_thread(threading.Thread):
                 self.connection_socket,addr = self.server_socket.accept()
                 print('[server thread] access from',str(addr),'accepted')
 
-                data = self.connection_socket.recv(MAX_BUFFER_LEN).decode()
-                print('[server thread] get file list from another server:',data)
+                # 수정: 하위폴더가 존재할 시, 하위폴더 우선 동기화
 
-                # install ===================================================================
-                # pre file check:
-                filelist=os.listdir(self.target_dir)
-                data=ast.literal_eval(data) #string->list, data:원격서버 파일리스트
+                # get a path ====================================================
+                filepath=self.connection_socket.recv(MAX_BUFFER_LEN).decode()
+                print("filepath:",filepath,"\n")
+                if len(filepath) > 1:
+                    filepath=filepath[1:]
+                    if not os.path.exists(os.path.join(self.target_dir,filepath)):
+                        os.mkdir(os.path.join(self.target_dir,filepath))
+                self.connection_socket.sendall('path received'.encode())
 
-                # 하위폴더 ignore
-                for _ in data:
-                    if os.path.isdir(self.target_dir+'/'+_):
-                        data.remove(_)
-                diff=set(data).difference(set(filelist))
+                print("before dirlist filepath:", filepath)
+
+
+                # sync the directories in this path ===============================
+                dirlist=self.connection_socket.recv(MAX_BUFFER_LEN).decode()
+                print("dirlist:",dirlist)
+                print("target_dir:",self.target_dir)
+                dirlist=ast.literal_eval(dirlist)
+                if len(dirlist)>0:
+                    for _ in dirlist:
+                        filepath=filepath[1:]
+                        print(_)
+                        print("dir create at:",os.path.join(self.target_dir,filepath,_))
+                        if not os.path.exists(os.path.join(self.target_dir,filepath,_)):
+                            os.mkdir(os.path.join(self.target_dir,filepath,_))
+                self.connection_socket.sendall('dir list received'.encode())
+
+                # sync files in in this directory =================================
+                filelist = self.connection_socket.recv(MAX_BUFFER_LEN).decode()
+                filelist = ast.literal_eval(filelist)
+                print("filelist",filelist)
+                self.connection_socket.sendall('filelist received'.encode())
+
+                ####
+                recv=self.connection_socket.recv(MAX_BUFFER_LEN)
+                print("[send filenums]",recv)
 
                 # print(list(diff))
-                diff=list(diff)
-                if len(diff)!=0:
+                filepath=filepath[1:]
+                my_filelist=os.listdir(os.path.join(self.target_dir,filepath))
+                diff = list(set(filelist).difference(set(my_filelist)))
+                print(diff)
+                self.connection_socket.sendall(bytes(str(len(diff)).encode()))
+                for item in diff:
                     # 여기서 diff 결과를 상대방에게 전달하여 없는 파일을 서버로 전송될 수 있게
-                    file=diff[0]
+                    file=item
                     self.connection_socket.send(file.encode())
                     changeState="create"
-                    with open(file, 'wb') as f:
+                    filepath=os.path.join(filepath,file)
+                    with open(os.path.join(self.target_dir,filepath), 'wb') as f:
                         while True:
                             data = self.connection_socket.recv(MAX_BUFFER_LEN)
                             if not data:
-                                print(f"sync file [{file}] from server")
+                                print(f"sync file [{filepath}/{file}] from server")
                                 # format: filename - state
-                                _install.install_log.info(f"{file}/{changeState}")
+                                _install.install_log.info(f"{filepath}/{changeState}")
                                 break
                             f.write(data)
-                    #self.connection_socket.close()
-                    #self.connection_socket = None
-                    # =======================================================================
-                if len(diff)==0:
-                    break
+                self.connection_socket.close()
+                self.connection_socket = None
+                print("GO!")
+                # =======================================================================
+
             # self.connection_socket.close()
             # self.connection_socket = None
         except socket.error as e:
@@ -185,12 +212,12 @@ def main(port1,port2,syncpath,interval):
     ##
     install.initSet(IP_ADDR,int(port2),interval)
     ##
-
+    print("DEBUG ========================== ")
 
     # watcher = Watcher(sys.argv[3], IP_ADDR, int(sys.argv[2]))
     # watcher.run()
 
-    # st.stop()
+    st.stop()
     st.join()
     print('[main thread] end entire program')
 

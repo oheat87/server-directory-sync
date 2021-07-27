@@ -25,10 +25,10 @@ DEBUG_PATH='C:\\Users\\한태호\\Documents\\pyRepos\\dsTest\\testFolder'
 
 #class for server threading
 class files_server_thread(threading.Thread):
-    def __init__(self,name, socket):
+    def __init__(self,name,socket):
         super().__init__()
         self.name = name
-        self.server_socket=  socket
+        self.server_socket=socket
         self.connection_socket=None
         self.recv_fno=None
 
@@ -252,7 +252,8 @@ def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num):
     print('[syncJobTest xcgFiles] start exchanging files!')
     #---------------server part
     server_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket.signal(socket.SIGPIPE, socket.SIG_IGN);
+    server_socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR, 1)
     server_socket.bind(('', my_port_num))
     server_socket.listen(MAX_LISTEN)
 
