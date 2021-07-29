@@ -102,11 +102,11 @@ class files_server_thread(threading.Thread):
                         f.write(data)
 
                 ### save logs =====================================
-                if file_flag=='c':changeState="create"
-                elif file_flag=='m':changeState="modified"
+                if file_flag=='c':changeState="c"
+                elif file_flag=='m':changeState="m"
                 _logtojson.json2log()
                 log_file, log_time = _logtojson.run('sync')
-                log_file.info(f"{file_name}/{changeState}")
+                log_file.info(f"{file_name}{changeState}")
                 ### re-format to .json
                 _logtojson.log2json()
                 ### ===========================================
@@ -239,10 +239,10 @@ def getJobList(my_event_dictionary,other_event_dictionary):
 def deleteFiles(file_list):
     for file_name in file_list:
         ### save logs =====================================
-        changeState="delete"
+        changeState="d"
         _logtojson.json2log()
         log_file, log_time = _logtojson.run('sync')
-        log_file.info(f"{file_name}/{changeState}")
+        log_file.info(f"{file_name}{changeState}")
         ### re-format to .json
         _logtojson.log2json()
         ### ===============================================

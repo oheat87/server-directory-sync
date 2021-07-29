@@ -6,6 +6,11 @@ import _logtojson
 import sys
 import shutil
 
+###
+import recursiveTest
+import jsondiff
+###
+
 MAX_BUFFER_LEN=1024
 
 def initFolder(path):
@@ -21,6 +26,7 @@ def initFolder(path):
 		}
 	],
 	"dirPath": "",
+    "ignore": "(TODO)",
 	"timeInterval": "",
     "startedTime": "",
 	"installTime": "",
@@ -51,6 +57,11 @@ class Install:
         print(f'[Install] directory path: {os.getcwd()}')
 
     def initSet(self,ip2,port2,interval):
+
+        # Back Up
+        self.backUp(time)
+
+
         setFile = os.path.join(self.install_path , 'setting.json')
 
         with open(setFile, 'r') as f:
@@ -82,15 +93,9 @@ class Install:
             # json format
             # _logtojson.log2json()
 
-            # Back Up
-            self.backUp(time)
-
             print("[install status] success!")
 
     def install(self,ip2,port2):
-
-        # 수정: 하위폴더가 존재할 시, 하위폴더 우선 동기화
-        for (path, dir, files) in os.walk(self.target_dir):
             # SOCKET
             connect = False
             while not connect:
@@ -101,51 +106,45 @@ class Install:
                 except ConnectionRefusedError:  # 서버 연결 열릴 때 까지 대기
                     continue
 
-            print("os.walk:",path,dir,files)
-            # PATH
-            filepath=path.replace(self.target_dir,"/")
-            install_socket.sendall(str(filepath).encode())
-            recv=install_socket.recv(MAX_BUFFER_LEN).decode() # path received
-            print("[install msg]",recv)
-            filepath=filepath[1:]
 
-            # DIR
-            install_socket.sendall(str(dir).encode())
-            recv=install_socket.recv(MAX_BUFFER_LEN) # dir list received
-            print("[install msg]",recv)
+            # 수정: 하위폴더가 존재할 시, 하위폴더 우선 동기화
+            ####################################
+            my_dict={}
+            recursiveTest.getDirTree(self.target_dir,my_dict)
+            install_socket.sendall(str(my_dict).encode())
+            install_socket.close()
 
-            # FILE
-            install_socket.sendall(str(files).encode())
-            recv=install_socket.recv(MAX_BUFFER_LEN) # file list received
-            print("[install msg]",recv)
+            while True:
+                # SOCKET
+                connect = False
+                while not connect:
+                    try:
+                        install_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        install_socket.connect((ip2, port2))
+                        connect = True
+                    except ConnectionResetError:
+                        break
 
-            ####
-            install_socket.sendall('request to get filenum'.encode())
-
-            filenum=install_socket.recv(MAX_BUFFER_LEN).decode()
-            filenum=int(filenum)
-            print("filenums:",filenum)
-
-            install_socket.sendall('success'.encode())
-
-            for i in range(filenum):
-                file = install_socket.recv(MAX_BUFFER_LEN).decode()  # 파일이름 받아옴
-                print(f"send file [{filepath}/{file}] to server")
-                filepath=os.path.join(filepath,file)
-                if not file:
-                    break
                 try:
-                    with open(os.path.join(path,file), 'rb') as f:
+                    file = install_socket.recv(MAX_BUFFER_LEN).decode()  # get filename
+                    print(f"send file [{file}] to server")
+                    filepath=os.path.join(self.target_dir,file)
+                    if not file:
+                        print("NOT FILE:",file)
+                        break
+                    with open(filepath, 'rb') as f:
                         while True:
                             data = f.read(MAX_BUFFER_LEN)
                             if not data:
                                 break
                             install_socket.sendall(data)
+                        install_socket.close()
+                except ConnectionResetError:
+                    break
                 except OSError as e:
                     print('there is no such file:', e)
                 except KeyboardInterrupt:
                     os._exit(0)
-            install_socket.close()
 
     def backUp(self,time):
         filename=os.path.join("backup",time+'.zip')
@@ -164,7 +163,7 @@ class Install:
 
 
 def unInstall(install_path,target_dir):
-    #Recovery
+    #Restore
     setFile = os.path.join(install_path , 'setting.json')
 
     with open(setFile, 'r') as f:
@@ -173,12 +172,16 @@ def unInstall(install_path,target_dir):
     # remove all files in targetDir
     target_dir_list=os.listdir(target_dir)
     for filename in target_dir_list:
-        if os.path.isfile(os.path.join(target_dir,filename)):
-            os.remove(os.path.join(target_dir,filename))
+        path=os.path.join(target_dir,filename)
+        if os.path.isfile(path):
+            os.remove(path)
+        elif os.path.isdir(path):
+            shutil.rmtree(path)
     # success to remove all files in targetDir
 
 
-    # run recovery
+    # run restore
+    print("===     RESTORE   ===")
     install_time=setting["installTime"]
     filename = os.path.join("backup", install_time + '.zip')
     with zipfile.ZipFile(os.path.join(install_path,filename), 'r') as recov_zip:
