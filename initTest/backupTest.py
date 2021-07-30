@@ -11,9 +11,9 @@ ARCHIVE_PATH=''
 ##TIME_FORMAT='%Y%m%d%H%M%S'
 
 #debug constants
-DEBUG_PORT=3500
-DEBUG_IP_ADDR='127.0.0.1'
-DEBUG_PATH='C:\\Users\\한태호\\Documents\\pyRepos\\dsTest\\testFolder'
+# DEBUG_PORT=3500
+# DEBUG_IP_ADDR='127.0.0.1'
+# DEBUG_PATH='C:\\Users\\한태호\\Documents\\pyRepos\\dsTest\\testFolder'
 
 def setPaths(prog_path,target_path):
     global PROG_PATH,TARGET_PATH,ARCHIVE_PATH
@@ -36,9 +36,10 @@ def getOnlyFileList(target_path):
     return file_list  
     
 
-def backupDir(archive_path,target_path):
+def backupDir(target_path,archive_path=ARCHIVE_PATH):
     file_list= getOnlyFileList(target_path)
-    zip_file_path= os.path.join(archive_path,'backup'+'_prev'+str(1)+'.zip')
+    zip_file_path= os.path.join(target_path,'backup'+'_prev'+str(1)+'.zip')
+
     with zipfile.ZipFile(zip_file_path,'w') as backup_zip:
         #save cwd
         cwd_tmp= os.getcwd()

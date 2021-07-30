@@ -49,7 +49,7 @@ install = False  # 일단은 global변수로 선언하고 json설정파일에 �
 MAX_LISTEN = 100
 MAX_BUFFER_LEN = 1024
 # IP_ADDR = '192.168.2.60'
-IP_ADDR = '127.0.0.1'
+# IP_ADDR = '127.0.0.1'
 
 # class for server threading
 class server_thread(threading.Thread):
@@ -172,12 +172,12 @@ class server_thread(threading.Thread):
         self.closeAllSocket()
 
 # ==========================================================================
-def main(port1,port2,syncpath,interval):
+def main(port1,ip2,port2,syncpath,interval):
     global install_path
     # check system arguments num
-    if len(sys.argv) != 4:
-        print('wrong system arguments!')
-        sys.exit(1)
+    # if len(sys.argv) != 4:
+    #     print('wrong system arguments!')
+    #     sys.exit(1)
 
     # install & setting ========================================================
 
@@ -203,7 +203,7 @@ def main(port1,port2,syncpath,interval):
     st.start()
 
     ##
-    install.initSet(IP_ADDR,int(port2),interval)
+    install.initSet(ip2,int(port2),interval)
     ##
     print("DEBUG ========================== ")
 
