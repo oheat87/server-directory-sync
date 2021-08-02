@@ -10,6 +10,7 @@
 		}
 	],
 	"dirPath": null,
+	"ignore": null,
 	"timeInterval": null,
 	"startedTime": null,
 	"installTime": null,

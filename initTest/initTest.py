@@ -22,6 +22,12 @@ import sys
 # modules for socket communication
 import socket
 import threading
+
+###
+import recursiveTest
+import jsondiff
+###
+
 from time import sleep
 
 # modules for file system tracking
@@ -39,15 +45,13 @@ import _install
 
 install = False  # 일단은 global변수로 선언하고 json설정파일에 프로그램 설정여부를 체크하는 flag넣기
 
-#some constants
+# some constants
 MAX_LISTEN = 100
-MAX_BUFFER_LEN= 1024
+MAX_BUFFER_LEN = 1024
 # IP_ADDR = '192.168.2.60'
-IP_ADDR = '127.0.0.1'
-DEFAULT_TIME_INTERVAL=120
+# IP_ADDR = '127.0.0.1'
 
-
-#class for server threading
+# class for server threading
 class server_thread(threading.Thread):
     def __init__(self,name, socket, target_dir):
         super().__init__()
@@ -61,47 +65,70 @@ class server_thread(threading.Thread):
         # by responding to connection socket
         print('[server thread] start ', threading.currentThread().getName())
         try:
-            while True:
-                self.connection_socket,addr = self.server_socket.accept()
-                print('[server thread] access from',str(addr),'accepted')
+            self.connection_socket, addr = self.server_socket.accept()
+            print('[server thread] access from', str(addr), 'accepted')
 
-                data = self.connection_socket.recv(MAX_BUFFER_LEN).decode()
-                print('[server thread] get file list from another server:',data)
 
-                # install ===================================================================
-                # pre file check:
-                filelist=os.listdir(self.target_dir)
-                data=ast.literal_eval(data) #string->list, data:원격서버 파일리스트
+            # 수정: 하위폴더가 존재할 시, 하위폴더 우선 동기화
+            ##########################################
+            your_dict=self.connection_socket.recv(MAX_BUFFER_LEN).decode()
+            your_dict=your_dict.replace("null","None")
+            your_dict=eval(your_dict)
+            my_dict={}
+            recursiveTest.getDirTree(self.target_dir,my_dict)
 
-                # 하위폴더 ignore
-                for _ in data:
-                    if os.path.isdir(self.target_dir+'/'+_):
-                        data.remove(_)
-                diff=set(data).difference(set(filelist))
 
-                # print(list(diff))
-                diff=list(diff)
-                if len(diff)!=0:
-                    # 여기서 diff 결과를 상대방에게 전달하여 없는 파일을 서버로 전송될 수 있게
-                    file=diff[0]
-                    self.connection_socket.send(file.encode())
-                    changeState="create"
-                    with open(file, 'wb') as f:
-                        while True:
-                            data = self.connection_socket.recv(MAX_BUFFER_LEN)
-                            if not data:
-                                print(f"sync file [{file}] from server")
-                                # format: filename - state
-                                _install.install_log.info(f"{file}/{changeState}")
-                                break
-                            f.write(data)
-                    #self.connection_socket.close()
-                    #self.connection_socket = None
-                    # =======================================================================
-                if len(diff)==0:
-                    break
-            # self.connection_socket.close()
-            # self.connection_socket = None
+            my_file_list=[]
+            my_dir_list=[] # no need to send
+            recursiveTest.dfs(my_dict,my_file_list,my_dir_list)
+
+            your_file_list=[]
+            your_dir_list=[]
+            recursiveTest.dfs(your_dict,your_file_list,your_dir_list)
+
+            # print(your_file_list)
+            # print(my_file_list)
+
+            file_list=list(set(your_file_list)-set(my_file_list))
+
+
+            ### MAKE DIR ###
+            for item in your_dir_list:
+                path=os.path.join(self.target_dir,item)
+                if not os.path.exists(path):
+                    # print("[MAKE DIR] @ ",path)
+                    os.mkdir(path)
+            ### ###
+            self.connection_socket.close()
+            self.connection_socket = None
+
+            for i in range(len(file_list)):
+                # SOCKET
+                self.connection_socket, addr = self.server_socket.accept()
+                print('[server thread] access from', str(addr), 'accepted')
+
+
+                file=file_list[i]
+                self.connection_socket.send(file.encode())
+                changeState="c" # create
+                filepath=os.path.join(self.target_dir,file)
+                with open(filepath, 'wb') as f:
+                    while True:
+                        data = self.connection_socket.recv(MAX_BUFFER_LEN)
+                        if not data:
+                            print(f"sync file [{file}] from server")
+                            # format: filename - state
+                            _install.install_log.info(f"{file}{changeState}")
+                            break
+                        f.write(data)
+                self.connection_socket.close()
+                self.connection_socket = None
+                # print("GO!")
+                # =======================================================================
+
+                # self.connection_socket.close()
+                # self.connection_socket = None
+
         except socket.error as e:
             print('[server thread] socket error debug:',e)
             print('[server thread] exiting....')
@@ -113,13 +140,6 @@ class server_thread(threading.Thread):
                 setting = json.load(f)
             if setting["install"]==True:
                 _logtojson.json2log()
-
-            # unInstall?
-            # if setting["install"]==False:
-            #     print("=============unInstall start=================")
-            #     if setting["installTime"]=="":
-            #         _install.unInstall(install_path,setting["dirPath"])
-
 
         # json format
         _logtojson.log2json()
@@ -152,12 +172,12 @@ class server_thread(threading.Thread):
         self.closeAllSocket()
 
 # ==========================================================================
-def main(port1,port2,syncpath,interval):
+def main(port1,ip2,port2,syncpath,interval):
     global install_path
     # check system arguments num
-    if len(sys.argv) != 4:
-        print('wrong system arguments!')
-        sys.exit(1)
+    # if len(sys.argv) != 4:
+    #     print('wrong system arguments!')
+    #     sys.exit(1)
 
     # install & setting ========================================================
 
@@ -183,9 +203,9 @@ def main(port1,port2,syncpath,interval):
     st.start()
 
     ##
-    install.initSet(IP_ADDR,int(port2),interval)
+    install.initSet(ip2,int(port2),interval)
     ##
-
+    print("DEBUG ========================== ")
 
     # watcher = Watcher(sys.argv[3], IP_ADDR, int(sys.argv[2]))
     # watcher.run()

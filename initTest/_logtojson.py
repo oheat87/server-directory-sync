@@ -55,7 +55,8 @@ class JsonFormatter(logging.Formatter):
 
     def format(self, record):
         record.message = record.getMessage()
-        filename, flag=record.message.split("/")
+        filename=record.message[:-1]
+        flag=record.message[-1:]
         if self.usesTime():
             record.asctime = self.formatTime(record, self.datefmt)
 
@@ -70,7 +71,9 @@ class JsonFormatter(logging.Formatter):
         # add filename & flag
         s=json.loads(s)
         s["filename"]=filename
-        s["flag"]=flag
+        if flag=='c': s["flag"]="create"
+        elif flag=='d': s["flag"]="delete"
+        elif flag=='m': s["flag"]="modified"
         #s=json.dumps(s,indent=4)
 
         return str(s)

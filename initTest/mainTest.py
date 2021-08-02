@@ -42,18 +42,20 @@ import json
 import datetime
 import _install
 import backupTest
+import _interface
+import keyboard
 
 #some constants
 MAX_LISTEN = 100
 MAX_BUFFER_LEN= 1024
 # IP_ADDR = '192.168.2.60'
-IP_ADDR = '127.0.0.1'
-DEFAULT_TIME_INTERVAL=30
+# IP_ADDR = '127.0.0.1'
+# DEFAULT_TIME_INTERVAL = 30
 
 #debug constants
-DEBUG_PORT=3500
-DEBUG_IP_ADDR='127.0.0.1'
-DEBUG_PATH='C:\\Users\\한태호\\Documents\\pyRepos\\dsTest\\testFolder'
+# DEBUG_PORT=3500
+# DEBUG_IP_ADDR='127.0.0.1'
+# DEBUG_PATH='C:\\Users\\한태호\\Documents\\pyRepos\\dsTest\\testFolder'
 
 #simple data structure
 class fsTracker():
@@ -192,6 +194,15 @@ class Watcher:
                     self.observer.stop()
                     return True
                 time.sleep(0.1)
+                if keyboard.is_pressed('1'):
+                    _interface.clear()
+                    print("<<<<<<<<<<<<STOP THE PROGRAM!>>>>>>>>>>>>>>")
+                    return False
+                elif keyboard.is_pressed('2'):
+                    _interface.clear()
+                    print("<<<<exit>>>>")
+                    os._exit(0)
+
         except KeyboardInterrupt as e:
             print('[filesystem watcher] exiting program...')
             print('[filesystem watcher] shutting down program given keyboard interrupt')
@@ -206,98 +217,114 @@ class Watcher:
         self.event_handler.delTracker()
 
 
-if __name__ == '__main__':
+def mainPro():
     # check system arguments num
-##    if len(sys.argv)!=4:
-##        print('wrong system arguments!')
-##        sys.exit(1)
-    #---------- save cwd & pass target path to backupTest module
-    print('[main thread] saving paths')
-    backupTest.setPaths(os.getcwd(),sys.argv[3])
+    ##    if len(sys.argv)!=4:
+    ##        print('wrong system arguments!')
+    ##        sys.exit(1)
+    # ---------- save cwd & pass target path to backupTest module
+    # print('[main thread] saving paths')
 
+    # backupTest.setPaths(os.getcwd(),sys.argv[3])
 
-    install_path=os.path.join(os.getcwd(),"syncPro")
-    if os.path.exists(os.path.join(install_path,"setting.json")):
-        with open(os.path.join(install_path,"setting.json"),'r') as f:
+    archive_path = os.getcwd()
+    _interface.PROG_PATH=archive_path
+    _interface.BACKUP_PATH=os.path.join(archive_path, 'syncPro', 'backup')
+    install_path = os.path.join(os.getcwd(), "syncPro")
+    if os.path.exists(os.path.join(install_path, "setting.json")):
+        with open(os.path.join(install_path, "setting.json"), 'r') as f:
             setting = json.load(f)
-
-        if setting["install"]==False:
+        _interface.TARGET_PATH=setting["dirPath"]
+        ### UNINSTALL ###
+        if setting["install"] == False:
             print("=============unInstall start=================")
-            if setting["installTime"]!="":
-                _install.unInstall(install_path,setting["dirPath"])
+            if setting["installTime"] != "":
+                _install.unInstall(install_path, setting["dirPath"])
+        #################
 
-        #---------- time synchronization process
+        # ---------- time synchronization process
         print('[main thread] doing time synchronization')
-        prev_endtime=rttTest.waitToSync(IP_ADDR,int(setting["servers"][0]["port_1"]),int(setting["servers"][1]["port_2"]))
+        prev_endtime = rttTest.waitToSync(setting["servers"][1]["ip_2"], setting["servers"][0]["port_1"],
+                                          int(setting["servers"][1]["port_2"]))
         print('[main thread] time synchronization done')
 
         # re-start the program
-        log_path = initTest.main(int(setting["servers"][0]["port_1"]),int(setting["servers"][1]["port_2"]),setting["dirPath"],DEFAULT_TIME_INTERVAL)
-
-
+        log_path = initTest.main(int(setting["servers"][0]["port_1"]), int(setting["servers"][1]["port_2"]),
+                                 setting["dirPath"], setting["timeInterval"])
 
     ### install start ==========================================
     if not os.path.exists(install_path):
-        prev_endtime=rttTest.waitToSync(IP_ADDR,int(sys.argv[1]),int(sys.argv[2]))
-        log_path = initTest.main(sys.argv[1],sys.argv[2],sys.argv[3],DEFAULT_TIME_INTERVAL)
+        # get input from user interface
+        port1, \
+        ip2, \
+        port2, \
+        directory_path, \
+        sync_time_interval \
+            = _interface.unInstalled()
 
-    with open(os.path.join(install_path,"setting.json"),'r') as f:
+        prev_endtime = rttTest.waitToSync(ip2, int(port1), int(port2))
+        log_path = initTest.main(port1, ip2, port2, directory_path, sync_time_interval)
+
+    with open(os.path.join(install_path, "setting.json"), 'r') as f:
         setting = json.load(f)
     # update started time
-    setting["startedTime"]=str(datetime.datetime.now()).replace(":", "-")[:-3]
-    with open(os.path.join(install_path,"setting.json"), 'w', encoding='utf-8') as mk:
+    setting["startedTime"] = str(datetime.datetime.now()).replace(":", "-")[:-3]
+    with open(os.path.join(install_path, "setting.json"), 'w', encoding='utf-8') as mk:
         json.dump(setting, mk, indent='\t')
+
+    _interface.installedWithProgramRunning()
 
     ### install end ============================================
 
-
-
-    #---------- make filesystem watcher and do synchronization process on every time interval
+    # ---------- make filesystem watcher and do synchronization process on every time interval
     while True:
-        #do directory backup
+        backupTest.setPaths(archive_path, setting["dirPath"])
+
+        # do directory backup
         print('[main thread] doing directory backup')
-        backupTest.backupDir(backupTest.ARCHIVE_PATH,backupTest.TARGET_PATH)
+        backupTest.backupDir(backupTest.ARCHIVE_PATH, backupTest.TARGET_PATH)
         print('[main thread] directory backup done')
 
-
-        prev_endtime+=DEFAULT_TIME_INTERVAL
-        watcher = Watcher(setting["dirPath"],prev_endtime)
+        prev_endtime += int(setting["timeInterval"])
+        watcher = Watcher(setting["dirPath"], prev_endtime)
         do_synchronization = watcher.run()
         if not do_synchronization:
             break
 
-        #DEBUG
+        # DEBUG
         print('[main thread] sync process on time interval activated!')
 
         # send track data
-        ds=watcher.getTracker()
+        ds = watcher.getTracker()
         print(ds.getContent())
-        JSON_fname=newTmpTest.makeJSON(ds.getContent())
-        print('JSON file',JSON_fname,'successfully created')
+        JSON_fname = newTmpTest.makeJSON(ds.getContent())
+        print('JSON file', JSON_fname, 'successfully created')
 
         # receive&load track data
-        received_fname= newTmpTest.exchangeTrackData(JSON_fname,IP_ADDR,int(setting["servers"][0]["port_1"]),int(setting["servers"][1]["port_2"]))
-        received_trackData= newTmpTest.loadJSON(received_fname)
+        received_fname = newTmpTest.exchangeTrackData(JSON_fname, setting["servers"][1]["ip_2"],
+                                                      int(setting["servers"][0]["port_1"]),
+                                                      int(setting["servers"][1]["port_2"]))
+        received_trackData = newTmpTest.loadJSON(received_fname)
 
         # delete temporary JSON files
         os.remove(JSON_fname)
         os.remove(received_fname)
-        
-##        # DEBUG: print received track data
-##        tds= fsTracker()
-##        tds.dictionary= received_trackData
-##        print('------------------received Track Data--------------------')
-##        tds.printContent()
-        
+
+        ##        # DEBUG: print received track data
+        ##        tds= fsTracker()
+        ##        tds.dictionary= received_trackData
+        ##        print('------------------received Track Data--------------------')
+        ##        tds.printContent()
+
         # deleteList,sendList,my_modifiedList=syncJobTest.getJobList(ds.getContent(),received_trackData)
-        deleteList,sendList,recv_createList,recv_modifiedList=syncJobTest.getJobList(ds.getContent(),received_trackData)
+        deleteList, sendList, recv_createList, recv_modifiedList = syncJobTest.getJobList(ds.getContent(),
+                                                                                          received_trackData)
 
         # here, need to delete dictionaries!!!!
         ds.resetContent()
         del received_trackData
-        
-        
-        #DEBUG
+
+        # DEBUG
         print('------------delete List----------------')
         for fname in deleteList: print(fname)
         print('------------send List----------------')
@@ -308,25 +335,32 @@ if __name__ == '__main__':
         for fname in recv_createList: print(fname)
         print('------------modified List----------------')
         for fname in recv_modifiedList: print(fname)
-        
-        #first, delete files to synchronize
-        #we can do some file backup operations here before really delete the file
-        #use deleteList
+
+        # first, delete files to synchronize
+        # we can do some file backup operations here before really delete the file
+        # use deleteList
         pass
-        #do deletions
+        # do deletions
         syncJobTest.deleteFiles(deleteList)
 
-        #second, send newly created and modified files to other side
-        #we can do some file backup operations here before really overwrite the file
-        #use my_modifiedList
+        # second, send newly created and modified files to other side
+        # we can do some file backup operations here before really overwrite the file
+        # use my_modifiedList
         pass
-        #do file exchange and overwrite via socket communication
-        syncJobTest.exchangeFiles(sendList,IP_ADDR,int(setting["servers"][0]["port_1"]),int(setting["servers"][1]["port_2"]))
+        # do file exchange and overwrite via socket communication
+        syncJobTest.exchangeFiles(sendList, setting["servers"][1]["ip_2"], int(setting["servers"][0]["port_1"]),
+                                  int(setting["servers"][1]["port_2"]))
 
         # clean instance memory
         del watcher
 
-        #DEBUG
+        # DEBUG
         print('[main thread] sync process on time interval done')
-    
+
+    _interface.installedWithProgramStopped()
+
     print('[main thread] end entire program')
+
+
+if __name__ == '__main__':
+    mainPro()

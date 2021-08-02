@@ -134,7 +134,11 @@ class Watcher:
 
     def run(self):
         #function for running filesystem watcher
-        self.observer.schedule(self.event_handler,self.target_dir,recursive=False)
+        ###
+        self.observer.schedule(self.event_handler,self.target_dir,recursive=True)
+        ###
+
+
         self.observer.start()
         #keep watching a folder until a keyboard interrupt comes
         try:
