@@ -228,6 +228,7 @@ def mainPro():
     # backupTest.setPaths(os.getcwd(),sys.argv[3])
 
     archive_path = os.getcwd()
+    _interface.PROG_PATH=archive_path
     _interface.BACKUP_PATH=os.path.join(archive_path, 'syncPro', 'backup')
     install_path = os.path.join(os.getcwd(), "syncPro")
     if os.path.exists(os.path.join(install_path, "setting.json")):

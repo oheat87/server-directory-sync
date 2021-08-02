@@ -8,6 +8,7 @@ import os
 import re
 import mainTest
 import backupTest
+import json
 
 title="\
 █▀▀ █  █ █▀▀▄ █▀▀ █▀▀█ █▀▀█ █▀▀█ \n\
@@ -28,11 +29,11 @@ regex = "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-
     [x] # installedWithProgramRunning()
     [x] # unInstalled()
     
-    # restore()
+    [x] # restore()
     # synchronizationCheck()
     # runInBackground()
     
-    # getSetting()
+    [x] # getSetting()
     # changeServers()
     # changeDirectoryPath()
     # changeTimeInterval()
@@ -230,22 +231,25 @@ def runInBackground():
     print(" Interface will run in background.\n"
           " Press 'Y' to continue. [Y/n] ")
 
-#TODO
+
 # SETTING ================================================================
 def getSetting():
     pos=" >> Change settings \n"
     line="=============================="
     print(title,line,"\n",pos,line)
+    # print(os.path.join(PROG_PATH,"syncPro", "setting.json"))
+    with open(os.path.join(PROG_PATH,"syncPro", "setting.json"), 'r') as f:
+        setting = json.load(f)
 
     print(" [Servers] \n"
           "   IP-1: localhost\n"
-          "   Port-1: 10\n"
-          "   IP-2: xxx.xxx.x.x\n"
-          "   Port-2: 20\n"
-          " [DirectoryPath] /home/xxx\n"
-          " [TimeInterval] 30 sec\n"
-          " [ProgramStartedAt] 2021-07-23 13:02:29,123\n"
-          " [InstalledAt] 2021-07-23 10:00:00,000")
+          f"   Port-1: {setting['servers'][0]['port_1']}\n"
+          f"   IP-2: {setting['servers'][1]['ip_2']}\n"
+          f"   Port-2: {setting['servers'][1]['port_2']}\n"
+          f" [DirectoryPath] {setting['dirPath']}\n"
+          f" [TimeInterval] {setting['timeInterval']} sec\n"
+          f" [ProgramStartedAt] {setting['startedTime']}\n"
+          f" [InstalledAt] {setting['installTime']}")
     print(" [Uninstall] Enter 'uninstall' ")
     print(line)
     print("Select to change: ")
