@@ -228,11 +228,12 @@ def mainPro():
     # backupTest.setPaths(os.getcwd(),sys.argv[3])
 
     archive_path = os.getcwd()
+    _interface.BACKUP_PATH=os.path.join(archive_path, 'syncPro', 'backup')
     install_path = os.path.join(os.getcwd(), "syncPro")
     if os.path.exists(os.path.join(install_path, "setting.json")):
         with open(os.path.join(install_path, "setting.json"), 'r') as f:
             setting = json.load(f)
-
+        _interface.TARGET_PATH=setting["dirPath"]
         ### UNINSTALL ###
         if setting["install"] == False:
             print("=============unInstall start=================")
@@ -242,7 +243,7 @@ def mainPro():
 
         # ---------- time synchronization process
         print('[main thread] doing time synchronization')
-        prev_endtime = rttTest.waitToSync(int(setting["servers"][1]["ip_2"]), int(setting["servers"][0]["port_1"]),
+        prev_endtime = rttTest.waitToSync(setting["servers"][1]["ip_2"], setting["servers"][0]["port_1"],
                                           int(setting["servers"][1]["port_2"]))
         print('[main thread] time synchronization done')
 

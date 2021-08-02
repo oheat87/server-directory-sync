@@ -7,6 +7,7 @@
 import os
 import re
 import mainTest
+import backupTest
 
 title="\
 █▀▀ █  █ █▀▀▄ █▀▀ █▀▀█ █▀▀█ █▀▀█ \n\
@@ -40,6 +41,9 @@ regex = "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-
     [x] # clear()
     
 """
+PROG_PATH=""
+TARGET_PATH=""
+BACKUP_PATH=""
 
 # INSTALL =================================================================
 def runInstall():
@@ -129,11 +133,11 @@ def installedWithProgramStopped():
     print(title,line,install_status,program_status,line,menu)
 
     num=input("Enter the number: ")
-    if num=='0': mainTest.main()
+    if num=='0': mainTest.mainPro()
     elif num=='1': restore()
-    elif num=='2': pass
-    elif num=='3': pass
-    elif num=='4': pass
+    elif num=='2': synchronizationCheck()
+    elif num=='3': runInBackground()
+    elif num=='4': getSetting()
     elif num=='5': os._exit(0)
     else: installedWithProgramStopped()
 
@@ -173,13 +177,12 @@ def unInstalled():
     else:
         unInstalled()
 
-#TODO
 # RESTORE ==================================================================
 def restore():
     clear()
-    print("현재위치: ",os.getcwd())
+    # print("현재위치: ",BACKUP_PATH)
     # demo_list = ['2021-07-21 13-46-54.918.zip', '2021-07-22 13-46-54.918.zip', '2021-07-23 13-46-54.918.zip']
-    backup_list=os.listdir(os.getcwd())
+    backup_list=os.listdir(BACKUP_PATH)
     pos=" >> Restore \n"
     line="=============================="
     print(title,line,"\n",pos,line)
@@ -188,6 +191,19 @@ def restore():
     for item in backup_list:
         print(f" <{num+1}>",item)
         num+=1
+    try:
+        zip_num=input("Enter the number to restore (E-exit): ")
+        if zip_num=='E' or zip_num=='e':
+            installedWithProgramStopped()
+        if int(zip_num)<=0 or int(zip_num)>len(backup_list):
+            restore()
+    except:
+        restore()
+
+    zip_name=backup_list[int(zip_num)-1]
+    backupTest.restoreDir(BACKUP_PATH,TARGET_PATH,zip_name)
+    print("되돌리기 완료")
+    restore()
 
 #TODO
 # SYNCHRONIZATION CHECK ======================================================
