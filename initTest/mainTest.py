@@ -195,6 +195,7 @@ class Watcher:
                     return True
                 time.sleep(0.1)
                 if keyboard.is_pressed('1'):
+                    self.observer.stop()
                     _interface.clear()
                     print("<<<<<<<<<<<<STOP THE PROGRAM!>>>>>>>>>>>>>>")
                     return False
@@ -249,7 +250,7 @@ def mainPro():
         print('[main thread] time synchronization done')
 
         # re-start the program
-        log_path = initTest.main(int(setting["servers"][0]["port_1"]), int(setting["servers"][1]["port_2"]),
+        log_path = initTest.main(int(setting["servers"][0]["port_1"]), setting["servers"][1]["ip_2"],int(setting["servers"][1]["port_2"]),
                                  setting["dirPath"], setting["timeInterval"])
 
     ### install start ==========================================
@@ -261,7 +262,7 @@ def mainPro():
         directory_path, \
         sync_time_interval \
             = _interface.unInstalled()
-
+        _interface.TARGET_PATH=directory_path
         prev_endtime = rttTest.waitToSync(ip2, int(port1), int(port2))
         log_path = initTest.main(port1, ip2, port2, directory_path, sync_time_interval)
 

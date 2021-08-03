@@ -210,7 +210,7 @@ def main(port1,ip2,port2,syncpath,interval):
     # watcher = Watcher(sys.argv[3], IP_ADDR, int(sys.argv[2]))
     # watcher.run()
 
-    # st.stop()
+    #st.stop()
     st.join()
     print('[main thread] end entire program')
 
