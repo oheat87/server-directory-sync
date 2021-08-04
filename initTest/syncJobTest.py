@@ -25,12 +25,16 @@ DEBUG_PATH='C:\\Users\\한태호\\Documents\\pyRepos\\dsTest\\testFolder'
 
 #class for server threading
 class files_server_thread(threading.Thread):
-    def __init__(self,name,socket):
+    def __init__(self,name, socket,time_interrupt_cycle):
         super().__init__()
         self.name = name
-        self.server_socket=socket
+        self.server_socket=  socket
         self.connection_socket=None
         self.recv_fno=None
+        # attributes for time interrupting
+        self.time_interrupt_cycle=time_interrupt_cycle
+        self.timer=None
+        self.time_interrupt_event=threading.Event()
 
     def run(self):
         # run server thread by listening to server listening socket and
@@ -39,12 +43,19 @@ class files_server_thread(threading.Thread):
 
         #handshaking part
         #get predefined handshaking string and receive the number of files being received
-        try:
-            while True:
+        while True:
+            try:
                 self.connection_socket,addr = self.server_socket.accept()
 
-                # get handshaking message
+                # get handshaking message with receiving time limit(time interrupt)
+                self.time_interrupt_event.clear()
+                self.timer=threading.Timer(self.time_interrupt_cycle,self.raiseTimeInterrupt)
+                self.timer.start()
                 data = self.connection_socket.recv(MAX_BUFFER_LEN)
+                self.timer.cancel()
+                del self.timer
+                self.timer=None
+  
                 msg = data.decode('utf-8')
                 if msg!=HANDSHAKE_STR_INIT:
                     print(f'[files_server thread] received message: {msg}')
@@ -55,17 +66,27 @@ class files_server_thread(threading.Thread):
                 self.connection_socket.sendall(HANDSHAKE_STR_INIT_ACK.encode('utf-8'))
 
                 # get the number of files receiving
+                self.time_interrupt_event.clear()
+                self.timer=threading.Timer(self.time_interrupt_cycle,self.raiseTimeInterrupt)
+                self.timer.start()
                 data = self.connection_socket.recv(MAX_BUFFER_LEN)
+                self.timer.cancel()
+                del self.timer
+                self.timer=None
+                
                 self.recv_fno=int(data.decode('utf-8'))
                 self.connection_socket.sendall(HANDSHAKE_STR_INIT_ACK.encode('utf-8'))
 
                 self.connection_socket.close()
                 self.connection_socket=None
                 break
-        except Exception as e:
-            print('[files_server thread] error occured while handshaking')
-            print(e)
-            sys.exit(1)
+            except Exception as e:
+                if self.time_interrupt_event.is_set():
+                    print('[files_server thread] time interrupt raised, probably BPError occurred')
+                    continue
+                print('[files_server thread] error occured while handshaking')
+                print(e)
+                sys.exit(1)
 
         print(f'[files_server thread] handshake completed, fileno:{self.recv_fno}')
 
@@ -102,11 +123,11 @@ class files_server_thread(threading.Thread):
                         f.write(data)
 
                 ### save logs =====================================
-                if file_flag=='c':changeState="c"
-                elif file_flag=='m':changeState="m"
+                if file_flag=='c':changeState="create"
+                elif file_flag=='m':changeState="modified"
                 _logtojson.json2log()
                 log_file, log_time = _logtojson.run('sync')
-                log_file.info(f"{file_name}{changeState}")
+                log_file.info(f"{file_name}/{changeState}")
                 ### re-format to .json
                 _logtojson.log2json()
                 ### ===========================================
@@ -149,6 +170,13 @@ class files_server_thread(threading.Thread):
         except socket.error as e:
             print('[files_server thread] connection socket has already been closed')
             print('[files_server thread] exception content:',e)
+    def raiseTimeInterrupt(self):
+        try:
+            self.connection_socket.close()
+        except socket.error as e:
+            print('[file_server thread rTI] error occurred while closing connection socket')
+            print(e)
+        self.time_interrupt_event.set()
 
 def getJobList(my_event_dictionary,other_event_dictionary):
     deleteList=[]
@@ -239,52 +267,72 @@ def getJobList(my_event_dictionary,other_event_dictionary):
 def deleteFiles(file_list):
     for file_name in file_list:
         ### save logs =====================================
-        changeState="d"
+        changeState="delete"
         _logtojson.json2log()
         log_file, log_time = _logtojson.run('sync')
-        log_file.info(f"{file_name}{changeState}")
+        log_file.info(f"{file_name}/{changeState}")
         ### re-format to .json
         _logtojson.log2json()
         ### ===============================================
         os.remove(file_name)
 
-def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num):
+def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num,server_wait_time):
     print('[syncJobTest xcgFiles] start exchanging files!')
     #---------------server part
     server_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # server_socket.signal(socket.SIGPIPE, socket.SIG_IGN);
-    server_socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR, 1)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind(('', my_port_num))
     server_socket.listen(MAX_LISTEN)
 
-    st= files_server_thread('ST',server_socket)
+    st= files_server_thread('ST',server_socket,server_wait_time)
     st.start()
     
     #---------------client part
     #first, handshake with server 
-    handshake_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     while True:
+        handshake_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        #connect to server socket
+        while True:
+            try:
+                handshake_socket.connect((ip_addr,other_port_num))
+            except (ConnectionRefusedError, ConnectionResetError):
+                time.sleep(0.001)
+                continue
+            break
+        #send handshake message
+        BPError_occurred=False
         try:
-            handshake_socket.connect((ip_addr,other_port_num))
-        except ConnectionRefusedError:
-            time.sleep(0.001)
+            handshake_socket.sendall(HANDSHAKE_STR_INIT.encode('utf-8'))
+        except BrokenPipeError:
+            BPError_occurred=True
+        if BPError_occurred: # if broken pipe error occurred, do all handshake process again
+            print('[syncJobTest xcgFiles] BPE occurred while sending handshake message')
             continue
+        #receive ACK message
+        while True:
+            try:
+                handshake_socket.recv(MAX_BUFFER_LEN)
+                break
+            except ConnectionResetError:
+                pass
+        #send num of sending files
+        BPError_occurred=False
+        try:
+            handshake_socket.sendall(str(len(file_list)).encode('utf-8'))
+        except BrokenPipeError:
+            BPError_occurred=True
+        if BPError_occurred:
+            print('[syncJobTest xcgFiles] BPE occurred while sending num of sending files')
+            continue
+        #receive ACK message
+        while True:
+            try:
+                handshake_socket.recv(MAX_BUFFER_LEN)
+                break
+            except ConnectionResetError:
+                pass
+        handshake_socket.close()
         break
-    handshake_socket.sendall(HANDSHAKE_STR_INIT.encode('utf-8'))
-    while True:
-        try:
-            handshake_socket.recv(MAX_BUFFER_LEN)
-            break
-        except ConnectionResetError:
-            pass
-    handshake_socket.sendall(str(len(file_list)).encode('utf-8'))
-    while True:
-        try:
-            handshake_socket.recv(MAX_BUFFER_LEN)
-            break
-        except ConnectionResetError:
-            pass
-    handshake_socket.close()
     print('[syncJobTest xcgFiles] first handshaking done')
     
     #then, send files
