@@ -51,11 +51,18 @@ MAX_BUFFER_LEN= 1024
 # IP_ADDR = '192.168.2.60'
 # IP_ADDR = '127.0.0.1'
 # DEFAULT_TIME_INTERVAL = 30
+SERVER_MIN_WAIT_TIME=3 # for waiting message of exchage file function, minimum waiting time
+MIN_DIFF_TIME=10 # for waiting message of exchage file function, minimum difference btw MIN_WAIT_TIME and time interval
+SERVER_WAIT_TIME_MULTIPLE=5 # for waiting message of exchage file function, number multiplied to half_avg_rtt
 
 #debug constants
 # DEBUG_PORT=3500
 # DEBUG_IP_ADDR='127.0.0.1'
 # DEBUG_PATH='C:\\Users\\한태호\\Documents\\pyRepos\\dsTest\\testFolder'
+
+SERVER_MIN_WAIT_TIME=3 # for waiting message of exchage file function, minimum waiting time
+MIN_DIFF_TIME=10 # for waiting message of exchage file function, minimum difference btw MIN_WAIT_TIME and time interval
+SERVER_WAIT_TIME_MULTIPLE=5 # for waiting message of exchage file function, number multiplied to half_avg_rtt
 
 #simple data structure
 class fsTracker():
@@ -244,7 +251,7 @@ def mainPro():
 
         # ---------- time synchronization process
         print('[main thread] doing time synchronization')
-        prev_endtime = rttTest.waitToSync(setting["servers"][1]["ip_2"], setting["servers"][0]["port_1"],
+        prev_endtime,avg_rtt = rttTest.waitToSync(setting["servers"][1]["ip_2"], setting["servers"][0]["port_1"],
                                           int(setting["servers"][1]["port_2"]))
         print('[main thread] time synchronization done')
 
@@ -262,7 +269,7 @@ def mainPro():
         sync_time_interval \
             = _interface.unInstalled()
 
-        prev_endtime = rttTest.waitToSync(ip2, int(port1), int(port2))
+        prev_endtime,avg_rtt = rttTest.waitToSync(ip2, int(port1), int(port2))
         log_path = initTest.main(port1, ip2, port2, directory_path, sync_time_interval)
 
     with open(os.path.join(install_path, "setting.json"), 'r') as f:
@@ -349,7 +356,7 @@ def mainPro():
         pass
         # do file exchange and overwrite via socket communication
         syncJobTest.exchangeFiles(sendList, setting["servers"][1]["ip_2"], int(setting["servers"][0]["port_1"]),
-                                  int(setting["servers"][1]["port_2"]))
+                                  int(setting["servers"][1]["port_2"]), getServerWaitTime(avg_rtt))
 
         # clean instance memory
         del watcher
