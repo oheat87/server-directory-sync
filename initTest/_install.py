@@ -8,7 +8,6 @@ import shutil
 
 ###
 import recursiveTest
-import jsondiff
 ###
 
 MAX_BUFFER_LEN=1024
@@ -192,7 +191,7 @@ def unInstall(install_path,target_dir):
     print("=============unInstall Success!=================")
 
     # remove program folder
-    shutil.rmtree(install_path)
+    shutil.rmtree(install_path,ignore_errors=True)
 
     sys.exit(0)
 

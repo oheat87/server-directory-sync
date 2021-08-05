@@ -25,7 +25,6 @@ import threading
 
 ###
 import recursiveTest
-import jsondiff
 ###
 
 from time import sleep
@@ -37,7 +36,6 @@ from watchdog.events import FileSystemEventHandler
 from watchdog.events import PatternMatchingEventHandler
 
 # modules for install program
-import ast
 import json
 
 import _logtojson
@@ -210,7 +208,7 @@ def main(port1,ip2,port2,syncpath,interval):
     # watcher = Watcher(sys.argv[3], IP_ADDR, int(sys.argv[2]))
     # watcher.run()
 
-    # st.stop()
+    #st.stop()
     st.join()
     print('[main thread] end entire program')
 
