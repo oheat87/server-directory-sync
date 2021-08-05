@@ -9,6 +9,7 @@ import re
 import mainTest
 import backupTest
 import json
+import _install
 
 title="\
 █▀▀ █  █ █▀▀▄ █▀▀ █▀▀█ █▀▀█ █▀▀█ \n\
@@ -30,14 +31,14 @@ regex = "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-
     [x] # unInstalled()
     
     [x] # restore()
-    # synchronizationCheck()
-    # runInBackground()
+    ===TODO # synchronizationCheck() 
+    ===TODO # runInBackground() 
     
     [x] # getSetting()
-    # changeServers()
-    # changeDirectoryPath()
-    # changeTimeInterval()
-    # runUnInstall
+    [x] # changeServers()
+    [x] # changeDirectoryPath()
+    [x] # changeTimeInterval()
+    [x] # runUnInstall
     
     [x] # clear()
     
@@ -48,9 +49,9 @@ BACKUP_PATH=""
 
 # INSTALL =================================================================
 def runInstall():
-    pos=" >> INSTALL \n"
-    line="=============================="
-    print(title,line,"\n",pos,line)
+    pos = " >> INSTALL \n"
+    line = "=============================="
+    print(title, line, "\n", pos, line)
     print(" <Init Setting>")
     # print(" > IP-1: \n"
     #       " > Port-1: \n"
@@ -61,12 +62,11 @@ def runInstall():
     #       " Press 'Y' to install [Y/n]")
     # ip1=input(" > IP-1: localhost")
     print(" > IP-1: localhost")
-    port1=input(" > Port-1: ")
-    ip2=input(" > IP-2: ")
-    port2=input(" > Port-2: ")
-    directory_path=input(" > DirectoryPath: ")
-    sync_time_interval=input(" > SyncTimeInterval(s): ")
-
+    port1 = input(" > Port-1: ")
+    ip2 = input(" > IP-2: ")
+    port2 = input(" > Port-2: ")
+    directory_path = input(" > DirectoryPath: ")
+    sync_time_interval = input(" > SyncTimeInterval(s): ")
 
     # check invalid input =======================================================
     check=""
@@ -81,6 +81,12 @@ def runInstall():
     else:
         check=f"[ERROR] Invalid Ip address: {ip2}"
         print(check)
+        RorN = input(" > Press 'R' to reset the input [R/n] ")
+        clear()
+        if RorN == 'R' or RorN == 'r':
+            return runInstall()
+        else:
+            return unInstalled()
 
     try:
         check=f"[ERROR] Invalid Port-2: {port2}"
@@ -91,13 +97,13 @@ def runInstall():
     if not os.path.exists(directory_path):
         check=f"[ERROR] DirectoryPath {directory_path} not exist!"
         print(check)
-
-    try:
-        check=f"[ERROR] Invalid SyncTimeInterval(s): {sync_time_interval}"
-        int(sync_time_interval)
-        check="" #reset
-    except:
-        print(check)
+    else:
+        try:
+            check=f"[ERROR] Invalid SyncTimeInterval(s): {sync_time_interval}"
+            int(sync_time_interval)
+            check="" #reset
+        except:
+            print(check)
     # invalid check end =======================================================================
 
     if check=="": # PASS
@@ -105,16 +111,17 @@ def runInstall():
         clear()
         if YorN=='Y' or YorN=='y':
             # os._exit(0)
+            # print(port1,ip2,port2,directory_path,sync_time_interval)
             return port1,ip2,port2,directory_path,sync_time_interval
         else:
-            unInstalled()
+            return unInstalled()
     else:
         RorN = input(" > Press 'R' to reset the input [R/n] ")
         clear()
         if RorN=='R' or RorN=='r':
-            runInstall()
+            return runInstall()
         else:
-            unInstalled()
+            return unInstalled()
 
 
 # INSTALLED, PROGRAM STOPPED ===============================================
@@ -134,13 +141,13 @@ def installedWithProgramStopped():
     print(title,line,install_status,program_status,line,menu)
 
     num=input("Enter the number: ")
-    if num=='0': mainTest.mainPro()
-    elif num=='1': restore()
-    elif num=='2': synchronizationCheck()
-    elif num=='3': runInBackground()
-    elif num=='4': getSetting()
+    if num=='0': return mainTest.mainPro()
+    elif num=='1': return restore()
+    elif num=='2': return synchronizationCheck()
+    elif num=='3': return runInBackground()
+    elif num=='4': return getSetting()
     elif num=='5': os._exit(0)
-    else: installedWithProgramStopped()
+    else: return installedWithProgramStopped()
 
 
 # INSTALLED, PROGRAM RUNNING ===============================================
@@ -176,7 +183,8 @@ def unInstalled():
     elif num=='2':
         os._exit(0)
     else:
-        unInstalled()
+        return unInstalled()
+
 
 # RESTORE ==================================================================
 def restore():
@@ -195,45 +203,21 @@ def restore():
     try:
         zip_num=input("Enter the number to restore (E-exit): ")
         if zip_num=='E' or zip_num=='e':
-            installedWithProgramStopped()
+            return installedWithProgramStopped()
         if int(zip_num)<=0 or int(zip_num)>len(backup_list):
-            restore()
+            return restore()
     except:
-        restore()
+        return restore()
 
     zip_name=backup_list[int(zip_num)-1]
     backupTest.restoreDir(BACKUP_PATH,TARGET_PATH,zip_name)
-    print("되돌리기 완료")
-    restore()
-
-#TODO
-# SYNCHRONIZATION CHECK ======================================================
-def synchronizationCheck():
-    pos=" >> Synchronization Check \n"
-    line="=============================="
-    print(title,line,"\n",pos,line)
-    srv1=" srv1: localhost"
-    srv2="srv2: xxx.xxx.x.x"
-    print(srv1,'\n',srv2)
-    print("",line)
-    #print(" Some files need to be synchronized.")
-    #print(" Press 'Y' to run synchronization. [Y/n] ")
-
-    print(" All have been synchronized.")
-    print(" Press 'E' to exit. ")
-
-#TODO
-# RUN IN BACKGROUND ======================================================
-def runInBackground():
-    pos=" >> Run in background \n"
-    line="=============================="
-    print(title,line,"\n",pos,line)
-    print(" Interface will run in background.\n"
-          " Press 'Y' to continue. [Y/n] ")
+    # print("되돌리기 완료")
+    return restore()
 
 
 # SETTING ================================================================
 def getSetting():
+    clear()
     pos=" >> Change settings \n"
     line="=============================="
     print(title,line,"\n",pos,line)
@@ -250,63 +234,200 @@ def getSetting():
           f" [TimeInterval] {setting['timeInterval']} sec\n"
           f" [ProgramStartedAt] {setting['startedTime']}\n"
           f" [InstalledAt] {setting['installTime']}")
-    print(" [Uninstall] Enter 'uninstall' ")
+    print(" - [Uninstall] Enter 'uninstall' ")
+    print(" - Enter 'R' to return to Main Menu ")
     print(line)
-    print("Select to change: ")
+    print("You can change [Servers], [DirectoryPath], [TimeInterval] and run [Uninstall]")
+    str=input("Select to change: ")
+    if str.lower()=='servers' or str.lower()=='server':
+        return changeServers()
+    elif str.lower()=='directorypath' or str.lower()=='dirpath':
+        return changeDirectoryPath()
+    elif str.lower()=='timeinterval':
+        return changeTimeInterval()
+    elif str.lower()=='uninstall':
+        return runUnInstall()
+    elif str=='R':
+        return installedWithProgramStopped()
+    else:
+        return getSetting()
 
-#TODO
+
+
 # Change: SERVERS ================================================================
 def changeServers():
+    clear()
     pos=" >> Change 'Servers' \n"
     line="=============================="
     print(title,line,"\n",pos,line)
 
+    ################
+    setFile = os.path.join(PROG_PATH, "syncPro", "setting.json")
+    with open(setFile, 'r') as f:
+        setting = json.load(f)
+    ################
+
     print(" [Servers] \n"
           "   IP-1: localhost\n"
-          "   Port-1: 10\n"
-          "   IP-2: xxx.xxx.x.x\n"
-          "   Port-2: 20\n"
-          " [DirectoryPath] /home/xxx")
+          f"   Port-1: {setting['servers'][0]['port_1']}\n"
+          f"   IP-2: {setting['servers'][1]['ip_2']}\n"
+          f"   Port-2: {setting['servers'][1]['port_2']}\n"
+          f" [DirectoryPath] {setting['dirPath']}")
+
     # get input line by line if no-change press 'Enter'
     print(line)
     print("<If no-change just press 'Enter'>")
-    print(" > IP-1 change to:\n"
-          " > Port-1 change to:\n"
-          " > IP-2 change to:\n"
-          " > Port-2 change to:\n"
-          " > DiretoryPath change to:")
+    # print(" > IP-1 change to:\n"
+    #       " > Port-1 change to:\n"
+    #       " > IP-2 change to:\n"
+    #       " > Port-2 change to:\n"
+    #       " > DiretoryPath change to:")
+    print(" > IP-1: localhost")
+    port1 = input(" > Port-1: ")
+    ip2 = input(" > IP-2: ")
+    port2 = input(" > Port-2: ")
+    directory_path = input(" > DirectoryPath: ")
 
-#TODO
+    # check invalid input =======================================================
+    check=""
+    try:
+        check=f"[ERROR] Invalid Port-1: {port1}"
+        if port1=="":
+            pass
+        else:
+            int(port1)
+            setting['servers'][0]['port_1']=port1
+    except:
+        print(check)
+
+    # check IP ADDR
+    if ip2=="":
+        pass
+    else:
+        if (re.search(regex, ip2)):
+            setting['servers'][1]['ip_2']=ip2
+        else:
+            check=f"[ERROR] Invalid Ip address: {ip2}"
+            print(check)
+
+    try:
+        check=f"[ERROR] Invalid Port-2: {port2}"
+        if port2=="":
+            pass
+        else:
+            int(port2)
+            setting['servers'][1]['port_2'] = port2
+    except:
+        print(check)
+
+    if directory_path=="":
+        pass
+    else:
+        if not os.path.exists(directory_path):
+            check=f"[ERROR] DirectoryPath {directory_path} not exist!"
+            print(check)
+        else:
+            setting['dirPath']=directory_path
+            check==""
+    # invalid check end =======================================================================
+
+    if check=="": # PASS
+        with open(setFile, 'w', encoding='utf-8') as mk:
+            json.dump(setting, mk, indent='\t')
+        return getSetting()
+    else:
+        RorN = input(" > Press 'R' to reset the input [R/n] ")
+        clear()
+        if RorN=='R' or RorN=='r':
+            return changeServers()
+        else:
+            return getSetting()
+
+
+
+
 # Change: DIRECTORY PATH ===========================================================
 def changeDirectoryPath():
+    clear()
     pos=" >> Change 'DirectoryPath' \n"
     line="=============================="
     print(title,line,"\n",pos,line)
-    print(" [DirectoryPath] /home/xxx")
+    ################
+    setFile = os.path.join(PROG_PATH, "syncPro", "setting.json")
+    with open(setFile, 'r') as f:
+        setting = json.load(f)
+    ################
+    print(f" [DirectoryPath] {setting['dirPath']}")
     print(line)
     print("<If no-change just press 'Enter'>")
-    print(" > Change to: ")
+    path=input(" > Change to: ")
+    if path=="":
+        return getSetting()
+    else:
+        if os.path.exists(path):
+            setting['dirPath']=path
+            with open(setFile, 'w', encoding='utf-8') as mk:
+                json.dump(setting, mk, indent='\t')
+            return getSetting()
+        else:
+            return changeDirectoryPath()
 
-#TODO
+
+
 # Change: TimeInterval ======================================================
 def changeTimeInterval():
+    clear()
     pos=" >> Change 'TimeInterval' \n"
     line="=============================="
     print(title,line,"\n",pos,line)
-    print(" [TimeInterval] 30 sec")
+    ################
+    setFile = os.path.join(PROG_PATH, "syncPro", "setting.json")
+    with open(setFile, 'r') as f:
+        setting = json.load(f)
+    ################
+    print(f" [TimeInterval] {setting['timeInterval']} sec")
     print(line)
     print("<If no-change just press 'Enter'>")
-    print(" > Change to: ")
+    timeInt=input(" > Change to: ")
+    if timeInt=="":
+        return getSetting()
+    else:
+        try:
+            int(timeInt)
+            setting['timeInterval']=timeInt
+            with open(setFile, 'w', encoding='utf-8') as mk:
+                json.dump(setting, mk, indent='\t')
+        except:
+            print("[Error] Wrong input")
+    return changeTimeInterval()
 
-#TODO
+
 # Change: Uninstall =========================================================
 def runUnInstall():
+    clear()
     pos=" >> UNINSTALL \n"
     line="=============================="
     print(title,line,"\n",pos,line)
-    print(" Remove all data in syncPro and \n"
+    YorN=input(" Remove all data in syncPro and \n"
           " UNINSTALL the program? \n"
           " [Y/N]")
+    if YorN=='Y' or YorN=='y':
+        ################
+        setFile = os.path.join(PROG_PATH,"syncPro", "setting.json")
+        with open(setFile, 'r') as f:
+            setting = json.load(f)
+        print(setting['install'])
+        setting["install"]=False
+
+        with open(setFile, 'w', encoding='utf-8') as mk:
+            json.dump(setting, mk, indent='\t')
+        ################
+        return _install.unInstall(os.path.join(PROG_PATH,"syncPro"), TARGET_PATH)
+    elif YorN=='N' or YorN=='n':
+        return getSetting()
+    else:
+        return runUnInstall()
+
 
 # clear =====================================================================
 def clear():
@@ -315,3 +436,47 @@ def clear():
         command = 'cls'
     os.system(command)
 
+
+
+# ====================================================================================
+# ====================================================================================
+# ====================================================================================
+
+
+# TODO
+# SYNCHRONIZATION CHECK ==============================================================
+def synchronizationCheck():
+    clear()
+    pos=" >> Synchronization Check \n"
+    line="=============================="
+    print(title,line,"\n",pos,line)
+    ################
+    setFile = os.path.join(PROG_PATH, "syncPro", "setting.json")
+    with open(setFile, 'r') as f:
+        setting = json.load(f)
+    ################
+    srv1=" srv1: localhost"
+    srv2=f"srv2: {setting['servers'][1]['ip_2']}"
+    print(srv1,'\n',srv2)
+    print("",line)
+    #print(" Some files need to be synchronized.")
+    #print(" Press 'Y' to run synchronization. [Y/n] ")
+
+    # print(" All have been synchronized.")
+    # print(" Press 'E' to exit. ")
+    print("NEED TO BE DEVELOPED.")
+    input()
+    return installedWithProgramStopped()
+
+# TODO
+# RUN IN BACKGROUND ==================================================================
+def runInBackground():
+    clear()
+    pos=" >> Run in background \n"
+    line="=============================="
+    print(title,line,"\n",pos,line)
+    # print(" Interface will run in background.\n"
+    #       " Press 'Y' to continue. [Y/n] ")
+    print("NEED TO BE DEVELOPED.")
+    input()
+    return installedWithProgramStopped()
