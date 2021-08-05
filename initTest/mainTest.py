@@ -25,16 +25,12 @@ import os
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from watchdog.events import PatternMatchingEventHandler
-from watchdog.events import DirCreatedEvent
-from watchdog.events import DirMovedEvent
-from watchdog.events import DirModifiedEvent
-from watchdog.events import DirDeletedEvent
-
 
 #import user module
 import newTmpTest
 import syncJobTest
 import rttTest
+import recursiveTracker
 
 #install & init_setting
 import initTest
@@ -55,20 +51,22 @@ SERVER_MIN_WAIT_TIME=3 # for waiting message of exchage file function, minimum w
 MIN_DIFF_TIME=10 # for waiting message of exchage file function, minimum difference btw MIN_WAIT_TIME and time interval
 SERVER_WAIT_TIME_MULTIPLE=5 # for waiting message of exchage file function, number multiplied to half_avg_rtt
 
-SERVER_MIN_WAIT_TIME=3 # for waiting message of exchage file function, minimum waiting time
-MIN_DIFF_TIME=10 # for waiting message of exchage file function, minimum difference btw MIN_WAIT_TIME and time interval
-SERVER_WAIT_TIME_MULTIPLE=5 # for waiting message of exchage file function, number multiplied to half_avg_rtt
-
-
 #debug constants
 # DEBUG_PORT=3500
 # DEBUG_IP_ADDR='127.0.0.1'
 # DEBUG_PATH='C:\\Users\\한태호\\Documents\\pyRepos\\dsTest\\testFolder'
 
-SERVER_MIN_WAIT_TIME=3 # for waiting message of exchage file function, minimum waiting time
-MIN_DIFF_TIME=10 # for waiting message of exchage file function, minimum difference btw MIN_WAIT_TIME and time interval
-SERVER_WAIT_TIME_MULTIPLE=5 # for waiting message of exchage file function, number multiplied to half_avg_rtt
-
+def getServerWaitTime(avg_rtt,time_interval=DEFAULT_TIME_INTERVAL):
+    time_candidate1=(avg_rtt/2)*SERVER_WAIT_TIME_MULTIPLE
+    time_candidate2= time_interval-MIN_DIFF_TIME
+    #check if server's minimum wait time is less than (time interval)-(MIN_DIFF_TIME)
+    if SERVER_MIN_WAIT_TIME>time_candidate2:
+        print('[dsTest getSWT] illegal wait time setting!')
+        sys.exit(1)
+    if time_candidate1<1:
+        return SERVER_MIN_WAIT_TIME
+    else:
+        return min(time_candidate1,time_candidate2)
 
 #simple data structure
 class fsTracker():
@@ -127,10 +125,8 @@ class fsTracker():
 
 
 class Handler(FileSystemEventHandler):
-    def __init__(self, ignore_directories=True):
-        self.tracker = fsTracker()
-        self.ignore_directories = ignore_directories
-        pass
+    def __init__(self, dir_root_path):
+        self.fs_tracker=recursiveTracker.fsTracker(dir_root_path,time.time())
 
     def typeNameExtension(self, event):
         # function for get a full string that expresses what happened to folder
@@ -138,50 +134,27 @@ class Handler(FileSystemEventHandler):
         fname, ext = os.path.splitext(os.path.basename(event.src_path))
         return_str += f'filename: {fname}, extension: {ext}'
         return return_str
-
-    def on_created(self, event):
-        if self.ignore_directories and type(event) is DirCreatedEvent:
-            pass
-        else:
-            self.tracker.pushEvent(os.path.basename(event.src_path), 'c', time.time())
-
-    ##        print(type(event))
-    def on_deleted(self, event):
-        if self.ignore_directories and type(event) is DirDeletedEvent:
-            pass
-        else:
-            self.tracker.pushEvent(os.path.basename(event.src_path), 'd', time.time())
-
-    ##        print(type(event))
-    def on_modified(self, event):
-        if self.ignore_directories and type(event) is DirModifiedEvent:
-            pass
-        else:
-            self.tracker.pushEvent(os.path.basename(event.src_path), 'm', time.time())
-
-    ##        print(type(event))
-    def on_moved(self, event):
-        if self.ignore_directories and type(event) is DirMovedEvent:
-            pass
-        else:
-            self.tracker.pushEvent(os.path.basename(event.src_path), 'd', time.time())
-            self.tracker.pushEvent(os.path.basename(event.dest_path), 'c', time.time())
-
-    ##        print(type(event))
-
+    def on_created(self,event):
+        self.fs_tracker.on_created(event)
+    def on_deleted(self,event):
+        self.fs_tracker.on_deleted(event)
+    def on_modified(self,event):
+        self.fs_tracker.on_modified(event)
+    def on_moved(self,event):
+        self.fs_tracker.on_moved(event)
     # function for getting tracker instance being used
     def getTracker(self):
-        return self.tracker
+        return self.fs_tracker
 
     # function for clear memory of dictionary instance
     def delTracker(self):
-        self.tracker.delContent()
+        self.fs_tracker.delContent()
         
 #class for watching a folder
 class Watcher:
     def __init__(self,path,end_time):
         
-        self.event_handler = Handler()
+        self.event_handler = Handler(path)
         self.observer = Observer()
         self.target_dir= path
         self.end_time=end_time
@@ -196,7 +169,7 @@ class Watcher:
 
     def run(self):
         #function for running filesystem watcher
-        self.observer.schedule(self.event_handler,self.target_dir,recursive=False)
+        self.observer.schedule(self.event_handler,self.target_dir,recursive=True)
         self.observer.start()
         #keep watching a folder until run out of time or get keyboard interrupt
         # start_time=time.time()
@@ -311,8 +284,9 @@ def mainPro():
 
         # send track data
         ds = watcher.getTracker()
-        print(ds.getContent())
-        JSON_fname = newTmpTest.makeJSON(ds.getContent())
+        my_trackData=ds.getContent()
+        print(my_trackData)
+        JSON_fname = newTmpTest.makeJSON(my_trackData)
         print('JSON file', JSON_fname, 'successfully created')
 
         # receive&load track data
@@ -331,40 +305,41 @@ def mainPro():
         ##        print('------------------received Track Data--------------------')
         ##        tds.printContent()
 
-        # deleteList,sendList,my_modifiedList=syncJobTest.getJobList(ds.getContent(),received_trackData)
-        deleteList, sendList, recv_createList, recv_modifiedList = syncJobTest.getJobList(ds.getContent(),
-                                                                                          received_trackData)
+        # sync target directory structure
+        recursiveTracker.syncDirectories(setting["dirPath"],my_trackData,received_trackData)
+
+        # get file lists of being deleted, sent and received        
+##        deleteList,sendList,my_modifiedList=syncJobTest.getJobList(ds.getContent(),received_trackData)
+##        deleteList, sendList, recv_createList, recv_modifiedList = syncJobTest.getJobList(ds.getContent(),
+##                                                                                          received_trackData)
+        dList,sList,rList=recursiveTracker.getJobList(setting["dirPath"],my_trackData,received_trackData)
 
         # here, need to delete dictionaries!!!!
-        ds.resetContent()
+        ds.delContent()
         del received_trackData
 
         # DEBUG
         print('------------delete List----------------')
-        for fname in deleteList: print(fname)
+        for fname in dList: print(fname)
         print('------------send List----------------')
-        for fname in sendList: print(fname)
-        # print('------------modified List----------------')
-        # for fname in my_modifiedList: print(fname)
-        print('------------create List----------------')
-        for fname in recv_createList: print(fname)
-        print('------------modified List----------------')
-        for fname in recv_modifiedList: print(fname)
+        for fname in sList: print(fname)
+        print('------------receive List----------------')
+        for fname in rList: print(fname)
 
         # first, delete files to synchronize
         # we can do some file backup operations here before really delete the file
         # use deleteList
         pass
         # do deletions
-        syncJobTest.deleteFiles(deleteList)
+        syncJobTest.deleteFiles(dList)
 
         # second, send newly created and modified files to other side
         # we can do some file backup operations here before really overwrite the file
         # use my_modifiedList
         pass
         # do file exchange and overwrite via socket communication
-        syncJobTest.exchangeFiles(sendList, setting["servers"][1]["ip_2"], int(setting["servers"][0]["port_1"]),
-                                  int(setting["servers"][1]["port_2"]), getServerWaitTime(avg_rtt))
+        syncJobTest.exchangeFiles(sList, setting["servers"][1]["ip_2"], int(setting["servers"][0]["port_1"]),
+                                  int(setting["servers"][1]["port_2"]),setting["dirPath"],getServerWaitTime(avg_rtt))
 
         # clean instance memory
         del watcher

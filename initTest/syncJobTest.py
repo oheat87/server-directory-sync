@@ -25,13 +25,14 @@ DEBUG_PATH='C:\\Users\\한태호\\Documents\\pyRepos\\dsTest\\testFolder'
 
 #class for server threading
 class files_server_thread(threading.Thread):
-
-    def __init__(self,name,socket,time_interrupt_cycle):
+    def __init__(self,name,socket,target_dir_path,time_interrupt_cycle):
         super().__init__()
         self.name = name
         self.server_socket=  socket
         self.connection_socket=None
         self.recv_fno=None
+        # attribute for directory synchronizing
+        self.target_dir_path=target_dir_path
         # attributes for time interrupting
         self.time_interrupt_cycle=time_interrupt_cycle
         self.timer=None
@@ -41,6 +42,8 @@ class files_server_thread(threading.Thread):
         # run server thread by listening to server listening socket and
         # by responding to connection socket
         print('[files_server thread] start ', threading.currentThread().getName())
+        tmp_cwd=os.getcwd()
+        os.chdir(self.target_dir_path)
 
         #handshaking part
         #get predefined handshaking string and receive the number of files being received
@@ -111,7 +114,7 @@ class files_server_thread(threading.Thread):
 
                 # get filename
                 data = self.connection_socket.recv(MAX_BUFFER_LEN)
-                file_name, file_flag= data.decode('utf-8').split('/')
+                file_name, file_flag= os.path.split(data.decode('utf-8'))
 
                 self.connection_socket.sendall(HANDSHAKE_STR_FILE_ACK.encode('utf-8'))
 
@@ -149,6 +152,7 @@ class files_server_thread(threading.Thread):
 
         # before finishing, close all the sockets this server thread has
         self.closeAllSocket()
+        os.chdir(tmp_cwd)
         print('[files_server thread] end ', threading.currentThread().getName())
     def stop(self):
         # stop server thread by closing all the sockets that this thread has
@@ -178,14 +182,6 @@ class files_server_thread(threading.Thread):
             print('[file_server thread rTI] error occurred while closing connection socket')
             print(e)
         self.time_interrupt_event.set()
-
-        def raiseTimeInterrupt(self):
-            try:
-                self.connection_socket.close()
-            except socket.error as e:
-                print('[file_server thread rTI] error occurred while closing connection socket')
-                print(e)
-            self.time_interrupt_event.set()
 
 def getJobList(my_event_dictionary,other_event_dictionary):
     deleteList=[]
@@ -285,7 +281,7 @@ def deleteFiles(file_list):
         ### ===============================================
         os.remove(file_name)
 
-def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num,server_wait_time):
+def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num,dir_root_path,server_wait_time):
     print('[syncJobTest xcgFiles] start exchanging files!')
     #---------------server part
     server_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -293,13 +289,14 @@ def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num,server_wait_time)
     server_socket.bind(('', my_port_num))
     server_socket.listen(MAX_LISTEN)
 
-    st= files_server_thread('ST',server_socket,server_wait_time)
+    st= files_server_thread('ST',server_socket,dir_root_path,server_wait_time)
     st.start()
     
     #---------------client part
     #first, handshake with server
     while True:
         handshake_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #connect to server socket
         while True:
             try:
                 handshake_socket.connect((ip_addr,other_port_num))
@@ -309,13 +306,11 @@ def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num,server_wait_time)
             break
         #send handshake message
         BPError_occurred=False
-
         try:
             handshake_socket.sendall(HANDSHAKE_STR_INIT.encode('utf-8'))
         except BrokenPipeError:
             BPError_occurred = True
         if BPError_occurred:  # if broken pipe error occurred, do all handshake process again
-
             print('[syncJobTest xcgFiles] BPE occurred while sending handshake message')
             continue
         #receive ACK message
@@ -335,7 +330,6 @@ def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num,server_wait_time)
             print('[syncJobTest xcgFiles] BPE occurred while sending num of sending files')
             continue
         #receive ACK message
-
         while True:
             try:
                 handshake_socket.recv(MAX_BUFFER_LEN)
@@ -347,6 +341,7 @@ def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num,server_wait_time)
     print('[syncJobTest xcgFiles] first handshaking done')
     
     #then, send files
+    file_path_start_index=len(dir_root_path)+1 # index of character in file path string; the latter part from this index of string is common part to synchronized folder.
     for file_name in file_list:
         client_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         while True:
@@ -358,12 +353,12 @@ def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num,server_wait_time)
             break
         client_socket.sendall(HANDSHAKE_STR_FILE.encode('utf-8'))
         client_socket.recv(MAX_BUFFER_LEN)
-        client_socket.sendall(file_name.encode('utf-8'))
+        client_socket.sendall(file_name[file_path_start_index:].encode('utf-8'))
         client_socket.recv(MAX_BUFFER_LEN)
         print(f'[syncJobTest xcgFiles] sending file {file_name}')
 
         try:
-            file_name=file_name.split("/")[0]
+            file_name=os.path.split(file_name)[0]
             with open(file_name,'rb') as f:
                 while True:
                     data=f.read(MAX_BUFFER_LEN)

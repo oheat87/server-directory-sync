@@ -5,6 +5,8 @@ import zipfile
 import _logtojson
 import sys
 import shutil
+import time # to sleep
+
 
 ###
 import recursiveTest
@@ -96,13 +98,14 @@ class Install:
 
     def install(self,ip2,port2):
             # SOCKET
+            install_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             connect = False
             while not connect:
                 try:
-                    install_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     install_socket.connect((ip2, port2))
                     connect = True
                 except ConnectionRefusedError:  # 서버 연결 열릴 때 까지 대기
+                    time.sleep(0.001)
                     continue
 
 
