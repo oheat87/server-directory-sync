@@ -55,11 +55,6 @@ SERVER_MIN_WAIT_TIME=3 # for waiting message of exchage file function, minimum w
 MIN_DIFF_TIME=10 # for waiting message of exchage file function, minimum difference btw MIN_WAIT_TIME and time interval
 SERVER_WAIT_TIME_MULTIPLE=5 # for waiting message of exchage file function, number multiplied to half_avg_rtt
 
-SERVER_MIN_WAIT_TIME=3 # for waiting message of exchage file function, minimum waiting time
-MIN_DIFF_TIME=10 # for waiting message of exchage file function, minimum difference btw MIN_WAIT_TIME and time interval
-SERVER_WAIT_TIME_MULTIPLE=5 # for waiting message of exchage file function, number multiplied to half_avg_rtt
-
-
 #debug constants
 # DEBUG_PORT=3500
 # DEBUG_IP_ADDR='127.0.0.1'
@@ -68,7 +63,6 @@ SERVER_WAIT_TIME_MULTIPLE=5 # for waiting message of exchage file function, numb
 SERVER_MIN_WAIT_TIME=3 # for waiting message of exchage file function, minimum waiting time
 MIN_DIFF_TIME=10 # for waiting message of exchage file function, minimum difference btw MIN_WAIT_TIME and time interval
 SERVER_WAIT_TIME_MULTIPLE=5 # for waiting message of exchage file function, number multiplied to half_avg_rtt
-
 
 #simple data structure
 class fsTracker():
@@ -208,7 +202,6 @@ class Watcher:
                     return True
                 time.sleep(0.1)
                 if keyboard.is_pressed('1'):
-                    self.observer.stop()
                     _interface.clear()
                     print("<<<<<<<<<<<<STOP THE PROGRAM!>>>>>>>>>>>>>>")
                     return False
@@ -263,7 +256,7 @@ def mainPro():
         print('[main thread] time synchronization done')
 
         # re-start the program
-        log_path = initTest.main(int(setting["servers"][0]["port_1"]), setting["servers"][1]["ip_2"],int(setting["servers"][1]["port_2"]),
+        log_path = initTest.main(int(setting["servers"][0]["port_1"]), int(setting["servers"][1]["port_2"]),
                                  setting["dirPath"], setting["timeInterval"])
 
     ### install start ==========================================
@@ -275,9 +268,8 @@ def mainPro():
         directory_path, \
         sync_time_interval \
             = _interface.unInstalled()
-        _interface.TARGET_PATH=directory_path
-        prev_endtime, avg_rtt = rttTest.waitToSync(ip2, int(port1), int(port2))
 
+        prev_endtime,avg_rtt = rttTest.waitToSync(ip2, int(port1), int(port2))
         log_path = initTest.main(port1, ip2, port2, directory_path, sync_time_interval)
 
     with open(os.path.join(install_path, "setting.json"), 'r') as f:
