@@ -25,10 +25,11 @@ DEBUG_PATH='C:\\Users\\한태호\\Documents\\pyRepos\\dsTest\\testFolder'
 
 #class for server threading
 class files_server_thread(threading.Thread):
+
     def __init__(self,name,socket,time_interrupt_cycle):
         super().__init__()
         self.name = name
-        self.server_socket=socket
+        self.server_socket=  socket
         self.connection_socket=None
         self.recv_fno=None
         # attributes for time interrupting
@@ -55,7 +56,7 @@ class files_server_thread(threading.Thread):
                 self.timer.cancel()
                 del self.timer
                 self.timer=None
-
+                
                 msg = data.decode('utf-8')
                 if msg!=HANDSHAKE_STR_INIT:
                     print(f'[files_server thread] received message: {msg}')
@@ -73,6 +74,7 @@ class files_server_thread(threading.Thread):
                 self.timer.cancel()
                 del self.timer
                 self.timer=None
+
                 self.recv_fno=int(data.decode('utf-8'))
                 self.connection_socket.sendall(HANDSHAKE_STR_INIT_ACK.encode('utf-8'))
 
@@ -122,11 +124,11 @@ class files_server_thread(threading.Thread):
                         f.write(data)
 
                 ### save logs =====================================
-                if file_flag=='c':changeState="c"
-                elif file_flag=='m':changeState="m"
+                if file_flag=='c':changeState="create"
+                elif file_flag=='m':changeState="modified"
                 _logtojson.json2log()
                 log_file, log_time = _logtojson.run('sync')
-                log_file.info(f"{file_name}{changeState}")
+                log_file.info(f"{file_name}/{changeState}")
                 ### re-format to .json
                 _logtojson.log2json()
                 ### ===========================================
@@ -169,6 +171,13 @@ class files_server_thread(threading.Thread):
         except socket.error as e:
             print('[files_server thread] connection socket has already been closed')
             print('[files_server thread] exception content:',e)
+    def raiseTimeInterrupt(self):
+        try:
+            self.connection_socket.close()
+        except socket.error as e:
+            print('[file_server thread rTI] error occurred while closing connection socket')
+            print(e)
+        self.time_interrupt_event.set()
 
         def raiseTimeInterrupt(self):
             try:
@@ -267,10 +276,10 @@ def getJobList(my_event_dictionary,other_event_dictionary):
 def deleteFiles(file_list):
     for file_name in file_list:
         ### save logs =====================================
-        changeState="d"
+        changeState="delete"
         _logtojson.json2log()
         log_file, log_time = _logtojson.run('sync')
-        log_file.info(f"{file_name}{changeState}")
+        log_file.info(f"{file_name}/{changeState}")
         ### re-format to .json
         _logtojson.log2json()
         ### ===============================================
@@ -280,8 +289,7 @@ def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num,server_wait_time)
     print('[syncJobTest xcgFiles] start exchanging files!')
     #---------------server part
     server_socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # server_socket.signal(socket.SIGPIPE, socket.SIG_IGN);
-    server_socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR, 1)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind(('', my_port_num))
     server_socket.listen(MAX_LISTEN)
 
@@ -307,6 +315,7 @@ def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num,server_wait_time)
         except BrokenPipeError:
             BPError_occurred = True
         if BPError_occurred:  # if broken pipe error occurred, do all handshake process again
+
             print('[syncJobTest xcgFiles] BPE occurred while sending handshake message')
             continue
         #receive ACK message
@@ -321,11 +330,12 @@ def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num,server_wait_time)
         try:
             handshake_socket.sendall(str(len(file_list)).encode('utf-8'))
         except BrokenPipeError:
-            BPError_occurred = True
+            BPError_occurred=True
         if BPError_occurred:
             print('[syncJobTest xcgFiles] BPE occurred while sending num of sending files')
             continue
-            # receive ACK message
+        #receive ACK message
+
         while True:
             try:
                 handshake_socket.recv(MAX_BUFFER_LEN)

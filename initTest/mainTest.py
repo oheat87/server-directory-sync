@@ -51,6 +51,9 @@ MAX_BUFFER_LEN= 1024
 # IP_ADDR = '192.168.2.60'
 # IP_ADDR = '127.0.0.1'
 # DEFAULT_TIME_INTERVAL = 30
+SERVER_MIN_WAIT_TIME=3 # for waiting message of exchage file function, minimum waiting time
+MIN_DIFF_TIME=10 # for waiting message of exchage file function, minimum difference btw MIN_WAIT_TIME and time interval
+SERVER_WAIT_TIME_MULTIPLE=5 # for waiting message of exchage file function, number multiplied to half_avg_rtt
 
 SERVER_MIN_WAIT_TIME=3 # for waiting message of exchage file function, minimum waiting time
 MIN_DIFF_TIME=10 # for waiting message of exchage file function, minimum difference btw MIN_WAIT_TIME and time interval
@@ -274,6 +277,7 @@ def mainPro():
             = _interface.unInstalled()
         _interface.TARGET_PATH=directory_path
         prev_endtime, avg_rtt = rttTest.waitToSync(ip2, int(port1), int(port2))
+
         log_path = initTest.main(port1, ip2, port2, directory_path, sync_time_interval)
 
     with open(os.path.join(install_path, "setting.json"), 'r') as f:
