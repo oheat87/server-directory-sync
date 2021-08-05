@@ -170,7 +170,7 @@ def waitToSync(ip_addr,my_port_num,other_port_num,wait_time=WAIT_TIME_DEFAULT):
         print('[waitToSync] me slower')
     #DEBUG
 ##    print(f'cur time:{cur_time}')
-    return cur_time
+    return [cur_time,avg_rtt]
 
 ##if __name__=='__main__':
 ##    print(f'cur_time:{time.time()}')

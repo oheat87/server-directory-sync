@@ -81,6 +81,12 @@ def runInstall():
     else:
         check=f"[ERROR] Invalid Ip address: {ip2}"
         print(check)
+        RorN = input(" > Press 'R' to reset the input [R/n] ")
+        clear()
+        if RorN == 'R' or RorN == 'r':
+            return runInstall()
+        else:
+            return unInstalled()
 
     try:
         check=f"[ERROR] Invalid Port-2: {port2}"

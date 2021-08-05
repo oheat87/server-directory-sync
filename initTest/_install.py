@@ -5,11 +5,9 @@ import zipfile
 import _logtojson
 import sys
 import shutil
-import datetime
 
 ###
 import recursiveTest
-import jsondiff
 ###
 
 MAX_BUFFER_LEN=1024
