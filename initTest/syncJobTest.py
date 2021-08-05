@@ -25,8 +25,7 @@ DEBUG_PATH='C:\\Users\\한태호\\Documents\\pyRepos\\dsTest\\testFolder'
 
 #class for server threading
 class files_server_thread(threading.Thread):
-
-    def __init__(self,name,socket,time_interrupt_cycle):
+    def __init__(self,name, socket,time_interrupt_cycle):
         super().__init__()
         self.name = name
         self.server_socket=  socket
@@ -56,7 +55,7 @@ class files_server_thread(threading.Thread):
                 self.timer.cancel()
                 del self.timer
                 self.timer=None
-                
+  
                 msg = data.decode('utf-8')
                 if msg!=HANDSHAKE_STR_INIT:
                     print(f'[files_server thread] received message: {msg}')
@@ -74,7 +73,7 @@ class files_server_thread(threading.Thread):
                 self.timer.cancel()
                 del self.timer
                 self.timer=None
-
+                
                 self.recv_fno=int(data.decode('utf-8'))
                 self.connection_socket.sendall(HANDSHAKE_STR_INIT_ACK.encode('utf-8'))
 
@@ -178,14 +177,6 @@ class files_server_thread(threading.Thread):
             print('[file_server thread rTI] error occurred while closing connection socket')
             print(e)
         self.time_interrupt_event.set()
-
-        def raiseTimeInterrupt(self):
-            try:
-                self.connection_socket.close()
-            except socket.error as e:
-                print('[file_server thread rTI] error occurred while closing connection socket')
-                print(e)
-            self.time_interrupt_event.set()
 
 def getJobList(my_event_dictionary,other_event_dictionary):
     deleteList=[]
@@ -297,25 +288,24 @@ def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num,server_wait_time)
     st.start()
     
     #---------------client part
-    #first, handshake with server
+    #first, handshake with server 
     while True:
-        handshake_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        handshake_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        #connect to server socket
         while True:
             try:
                 handshake_socket.connect((ip_addr,other_port_num))
-            except ConnectionRefusedError:
+            except (ConnectionRefusedError, ConnectionResetError):
                 time.sleep(0.001)
                 continue
             break
         #send handshake message
         BPError_occurred=False
-
         try:
             handshake_socket.sendall(HANDSHAKE_STR_INIT.encode('utf-8'))
         except BrokenPipeError:
-            BPError_occurred = True
-        if BPError_occurred:  # if broken pipe error occurred, do all handshake process again
-
+            BPError_occurred=True
+        if BPError_occurred: # if broken pipe error occurred, do all handshake process again
             print('[syncJobTest xcgFiles] BPE occurred while sending handshake message')
             continue
         #receive ACK message
@@ -335,7 +325,6 @@ def exchangeFiles(file_list,ip_addr,my_port_num,other_port_num,server_wait_time)
             print('[syncJobTest xcgFiles] BPE occurred while sending num of sending files')
             continue
         #receive ACK message
-
         while True:
             try:
                 handshake_socket.recv(MAX_BUFFER_LEN)
